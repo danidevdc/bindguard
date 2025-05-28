@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { format, parseISO, compareAsc } from 'date-fns';
-import { es } from 'date-fns/locale'; // For Spanish date formatting
+import { es } from 'date-fns/locale'; 
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -21,20 +21,18 @@ interface ProcessedRecord extends DispensingRecord {
 }
 
 export default function InventoryCard({ medicine }: InventoryCardProps) {
-  const stockLevelAlertThreshold = 10; // Example threshold
+  const stockLevelAlertThreshold = 10; 
   const [clientNow, setClientNow] = useState<Date | null>(null);
 
   useEffect(() => {
     setClientNow(new Date());
   }, []);
 
-  // Sort history chronologically (oldest first) to calculate running balance correctly
   const sortedHistory = [...medicine.dispensingHistory].sort((a, b) => 
     compareAsc(parseISO(a.date), parseISO(b.date))
   );
 
   let runningBalance = 0;
-  // processedHistory will now be in ascending chronological order (oldest first, newest last)
   const processedHistory: ProcessedRecord[] = sortedHistory.map(record => {
     if (record.type === 'stocked') {
       runningBalance += record.quantity;
@@ -44,15 +42,20 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
+  // Reverse history for display (newest on top), but calculations were done chronologically
+  // const displayHistory = [...processedHistory].reverse(); 
+  // Keeping chronological order as per user's last request (oldest first, newest last)
+  const displayHistory = processedHistory;
+
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
     try {
       const parsedExpDate = parseISO(expirationDate);
-      if (isNaN(parsedExpDate.getTime())) return false; // Invalid date string
+      if (isNaN(parsedExpDate.getTime())) return false;
       return compareAsc(parsedExpDate, comparisonDate) < 0;
     } catch (error) {
-      return false; // Error during parsing
+      return false; 
     }
   };
   
@@ -60,13 +63,13 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     if (!expirationDate) return false;
     try {
       const expDate = parseISO(expirationDate);
-      if (isNaN(expDate.getTime())) return false; // Invalid date string
+      if (isNaN(expDate.getTime())) return false;
       
       const diffTime = expDate.getTime() - comparisonDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 0 && diffDays <= daysThreshold;
     } catch (error) {
-      return false; // Error during parsing or calculation
+      return false; 
     }
   };
 
@@ -106,65 +109,78 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         
         <div>
           <h4 className="font-medium text-foreground mb-2">Historial de Transacciones:</h4>
-          {processedHistory.length > 0 ? (
-            <ScrollArea className="h-[200px] w-full rounded-md border">
-              <Table className="text-sm">
-                <TableHeader className="sticky top-0 z-10 bg-card">
-                  <TableRow>
-                    <TableHead className="w-[80px]">Fecha</TableHead>
-                    <TableHead>ID Rx/Lote</TableHead>
-                    <TableHead className="text-center w-[60px]">Entrada</TableHead>
-                    <TableHead className="text-center w-[60px]">Salida</TableHead>
-                    <TableHead className="text-center w-[60px]">Saldo</TableHead>
-                    <TableHead className="w-[90px]">Fecha Exp.</TableHead>
-                    <TableHead className="w-[80px]">Usuario</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {processedHistory.map((record) => (
-                    <TableRow 
-                      key={record.id} 
-                      className={cn(
-                        clientNow && record.expirationDate && record.type === 'stocked' && isExpiredClient(record.expirationDate, clientNow) 
-                        ? 'bg-red-100 dark:bg-red-900/30' 
-                        : ''
-                      )}
-                    >
-                      <TableCell>{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</TableCell>
-                      <TableCell>{record.rxNumber}</TableCell>
-                      <TableCell className="text-center text-green-600 font-medium">
-                        {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
-                      </TableCell>
-                      <TableCell className="text-center text-red-600 font-medium">
-                        {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
-                      </TableCell>
-                      <TableCell className="text-center font-semibold">{record.balance}</TableCell>
-                      <TableCell>
-                        {record.expirationDate && clientNow ? (
-                           <div className={cn("flex items-center gap-1 text-xs", 
-                                isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" : 
-                                isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
-                            )}>
-                             {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3.5 w-3.5 shrink-0" title="Expirado"/>}
-                             {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3.5 w-3.5 shrink-0" title="Expira pronto"/>}
-                             {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" title="Vigente"/>}
-                            {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
-                           </div>
-                        ) : (
-                          record.type === 'stocked' ? <span className="text-xs text-muted-foreground">N/A</span> : ''
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-xs">
-                           <UserCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0"/> 
-                           {record.userName || 'N/A'}
-                        </div>
-                      </TableCell>
+          {displayHistory.length > 0 ? (
+            <div className="rounded-md border"> {/* Container for the entire table structure */}
+              {/* Fixed Header Part */}
+              <div className="bg-card"> {/* Background for header */}
+                {/* Using raw table element to avoid shadcn/Table's own overflow wrapper */}
+                <table className="w-full text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha</TableHead>
+                      <TableHead className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID Rx/Lote</TableHead>
+                      <TableHead className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Entrada</TableHead>
+                      <TableHead className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Salida</TableHead>
+                      <TableHead className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Saldo</TableHead>
+                      <TableHead className="w-[90px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha Exp.</TableHead>
+                      <TableHead className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Usuario</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableHeader>
+                </table>
+              </div>
+
+              {/* Scrollable Body Part */}
+              {/* Adjusted height: 200px total - approx 48px for header (h-12) = 152px */}
+              <ScrollArea className="h-[152px] w-full">
+                 {/* Using raw table element here too */}
+                <table className="w-full text-sm">
+                  <TableBody>
+                    {displayHistory.map((record) => (
+                      <TableRow 
+                        key={record.id} 
+                        className={cn(
+                          clientNow && record.expirationDate && record.type === 'stocked' && isExpiredClient(record.expirationDate, clientNow) 
+                          ? 'bg-red-100 dark:bg-red-900/30' 
+                          : '',
+                          'border-b' // Ensure rows have bottom borders
+                        )}
+                      >
+                        <TableCell className="w-[80px] p-4 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</TableCell>
+                        <TableCell className="p-4 align-middle">{record.rxNumber}</TableCell>
+                        <TableCell className="text-center w-[70px] p-4 align-middle text-green-600 font-medium">
+                          {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
+                        </TableCell>
+                        <TableCell className="text-center w-[70px] p-4 align-middle text-red-600 font-medium">
+                          {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
+                        </TableCell>
+                        <TableCell className="text-center font-semibold w-[70px] p-4 align-middle">{record.balance}</TableCell>
+                        <TableCell className="w-[90px] p-4 align-middle">
+                          {record.expirationDate && clientNow ? (
+                            <div className={cn("flex items-center gap-1 text-xs", 
+                                  isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" : 
+                                  isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
+                              )}>
+                              {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3.5 w-3.5 shrink-0" title="Expirado"/>}
+                              {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3.5 w-3.5 shrink-0" title="Expira pronto"/>}
+                              {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                              {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
+                            </div>
+                          ) : (
+                            record.type === 'stocked' ? <span className="text-xs text-muted-foreground">N/A</span> : ''
+                          )}
+                        </TableCell>
+                        <TableCell className="w-[80px] p-4 align-middle">
+                          <div className="flex items-center gap-1 text-xs">
+                            <UserCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0"/> 
+                            {record.userName || 'N/A'}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </table>
+              </ScrollArea>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">Sin historial de transacciones.</p>
           )}
@@ -177,3 +193,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
