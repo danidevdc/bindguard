@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from 'next/link';
-import { Pill, LogOut } from 'lucide-react';
+import { Pill, LogOut, Home as HomeIcon } from 'lucide-react'; // Added HomeIcon
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -15,10 +16,18 @@ export default function AppHeader() {
           <Pill className="h-7 w-7" />
           <h1 className="text-xl font-semibold">RxLocal Inventory</h1>
         </Link>
-        <Button variant="ghost" onClick={logout} className="text-primary hover:bg-primary/10">
-          <LogOut className="mr-2 h-5 w-5" />
-          Logout
-        </Button>
+        <div className="flex items-center space-x-2"> {/* Group for right-side buttons */}
+          <Link href="/dashboard" passHref legacyBehavior>
+            <Button variant="ghost" className="text-primary hover:bg-primary/10">
+              <HomeIcon className="mr-2 h-5 w-5" />
+              Inicio
+            </Button>
+          </Link>
+          <Button variant="ghost" onClick={logout} className="text-primary hover:bg-primary/10">
+            <LogOut className="mr-2 h-5 w-5" />
+            Logout
+          </Button>
+        </div>
       </div>
     </header>
   );
