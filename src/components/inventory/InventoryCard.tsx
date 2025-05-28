@@ -3,7 +3,7 @@
 
 import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Using raw table for custom scroll
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck } from 'lucide-react';
@@ -41,12 +41,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     }
     return { ...record, balance: runningBalance };
   });
-
-  // Reverse history for display (newest on top), but calculations were done chronologically
-  // const displayHistory = [...processedHistory].reverse(); 
-  // Keeping chronological order as per user's last request (oldest first, newest last)
-  const displayHistory = processedHistory;
-
+  
+  const displayHistory = processedHistory; // Chronological: oldest first, newest last
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
@@ -72,7 +68,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       return false; 
     }
   };
-
 
   return (
     <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -110,51 +105,46 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-foreground mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
-            <div className="rounded-md border"> {/* Container for the entire table structure */}
-              {/* Fixed Header Part */}
-              <div className="bg-card"> {/* Background for header */}
-                {/* Using raw table element to avoid shadcn/Table's own overflow wrapper */}
+            <div className="rounded-md border">
+              <div className="bg-card"> 
                 <table className="w-full text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha</TableHead>
-                      <TableHead className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID Rx/Lote</TableHead>
-                      <TableHead className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Entrada</TableHead>
-                      <TableHead className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Salida</TableHead>
-                      <TableHead className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Saldo</TableHead>
-                      <TableHead className="w-[90px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha Exp.</TableHead>
-                      <TableHead className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Usuario</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <thead> {/* Use thead for semantic header */}
+                    <tr className="border-b"> {/* Shadcn TableRow equivalent */}
+                      <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID Rx/Lote</th>
+                      <th className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Entrada</th>
+                      <th className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Salida</th>
+                      <th className="text-center w-[70px] h-12 px-4 align-middle font-medium text-muted-foreground">Saldo</th>
+                      <th className="w-[90px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha Exp.</th>
+                      <th className="w-[80px] h-12 px-4 text-left align-middle font-medium text-muted-foreground">Usuario</th>
+                    </tr>
+                  </thead>
                 </table>
               </div>
 
-              {/* Scrollable Body Part */}
-              {/* Adjusted height: 200px total - approx 48px for header (h-12) = 152px */}
               <ScrollArea className="h-[152px] w-full">
-                 {/* Using raw table element here too */}
                 <table className="w-full text-sm">
-                  <TableBody>
+                  <tbody> {/* Use tbody for semantic body */}
                     {displayHistory.map((record) => (
-                      <TableRow 
+                      <tr 
                         key={record.id} 
                         className={cn(
-                          clientNow && record.expirationDate && record.type === 'stocked' && isExpiredClient(record.expirationDate, clientNow) 
+                          clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow) 
                           ? 'bg-red-100 dark:bg-red-900/30' 
                           : '',
-                          'border-b' // Ensure rows have bottom borders
+                          'border-b' 
                         )}
                       >
-                        <TableCell className="w-[80px] p-4 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</TableCell>
-                        <TableCell className="p-4 align-middle">{record.rxNumber}</TableCell>
-                        <TableCell className="text-center w-[70px] p-4 align-middle text-green-600 font-medium">
+                        <td className="w-[80px] p-4 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                        <td className="p-4 align-middle">{record.rxNumber}</td>
+                        <td className="text-center w-[70px] p-4 align-middle text-green-600 font-medium">
                           {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
-                        </TableCell>
-                        <TableCell className="text-center w-[70px] p-4 align-middle text-red-600 font-medium">
+                        </td>
+                        <td className="text-center w-[70px] p-4 align-middle text-red-600 font-medium">
                           {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold w-[70px] p-4 align-middle">{record.balance}</TableCell>
-                        <TableCell className="w-[90px] p-4 align-middle">
+                        </td>
+                        <td className="text-center font-semibold w-[70px] p-4 align-middle">{record.balance}</td>
+                        <td className="w-[90px] p-4 align-middle">
                           {record.expirationDate && clientNow ? (
                             <div className={cn("flex items-center gap-1 text-xs", 
                                   isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" : 
@@ -166,18 +156,18 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                               {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
                             </div>
                           ) : (
-                            record.type === 'stocked' ? <span className="text-xs text-muted-foreground">N/A</span> : ''
+                             <span className="text-xs text-muted-foreground">N/A</span>
                           )}
-                        </TableCell>
-                        <TableCell className="w-[80px] p-4 align-middle">
+                        </td>
+                        <td className="w-[80px] p-4 align-middle">
                           <div className="flex items-center gap-1 text-xs">
                             <UserCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0"/> 
                             {record.userName || 'N/A'}
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
-                  </TableBody>
+                  </tbody>
                 </table>
               </ScrollArea>
             </div>
@@ -193,4 +183,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
