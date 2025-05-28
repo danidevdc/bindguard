@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Camera, CalendarIcon, FileText, Package, CheckCircle, AlertTriangle, VideoOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns'; // Removed parseISO as it's not directly used here for formatting
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 
@@ -21,7 +21,7 @@ import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 // import QrScanner from 'qr-scanner'; 
 
 export default function ScanForm() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(undefined); // Initialized to undefined
   const [prescriptionNumber, setPrescriptionNumber] = useState('');
   const [quantity, setQuantity] = useState('');
   const [medicineDetails, setMedicineDetails] = useState(''); // Stores QR data or manual input
@@ -39,7 +39,7 @@ export default function ScanForm() {
 
 
   useEffect(() => {
-    // Pre-fill date on component mount
+    // Pre-fill date on component mount (client-side only)
     setDate(new Date());
   }, []);
 
@@ -88,13 +88,19 @@ export default function ScanForm() {
       //   qrScannerRef.current.destroy();
       //   qrScannerRef.current = null;
       // }
-      setHasCameraPermission(null); // Reset permission status
+      // Do not reset hasCameraPermission here to keep showing the alert if denied.
+      // It will be re-evaluated if scanning is attempted again.
     }
 
     // Cleanup function
     // return () => {
     //   if (qrScannerRef.current) {
     //     qrScannerRef.current.destroy();
+    //   }
+    //   // Ensure camera is released if component unmounts while scanning
+    //   if (videoRef.current && videoRef.current.srcObject) {
+    //     const stream = videoRef.current.srcObject as MediaStream;
+    //     stream.getTracks().forEach(track => track.stop());
     //   }
     // };
   }, [isScanning, toast]);
@@ -104,6 +110,7 @@ export default function ScanForm() {
     setIsScanning(prev => !prev);
     if(!isScanning) { // If we are about to start scanning
         setMedicineDetails(''); // Clear previous details
+        setHasCameraPermission(null); // Reset camera permission status to re-evaluate
     }
   };
   
@@ -354,3 +361,4 @@ export default function ScanForm() {
     </Card>
   );
 }
+

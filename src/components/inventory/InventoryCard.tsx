@@ -9,6 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { format, parseISO, compareAsc } from 'date-fns';
 import { es } from 'date-fns/locale'; // For Spanish date formatting
+import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 interface InventoryCardProps {
   medicine: Medicine;
@@ -20,6 +22,11 @@ interface ProcessedRecord extends DispensingRecord {
 
 export default function InventoryCard({ medicine }: InventoryCardProps) {
   const stockLevelAlertThreshold = 10; // Example threshold
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setClientNow(new Date());
+  }, []);
 
   // Sort history chronologically (oldest first) to calculate running balance correctly
   const sortedHistory = [...medicine.dispensingHistory].sort((a, b) => 
@@ -37,19 +44,30 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   }).sort((a,b) => compareAsc(parseISO(b.date), parseISO(a.date))); // Then sort descending for display (most recent first)
 
 
-  const isExpired = (expirationDate?: string) => {
+  const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
-    return compareAsc(parseISO(expirationDate), new Date()) < 0;
+    try {
+      const parsedExpDate = parseISO(expirationDate);
+      if (isNaN(parsedExpDate.getTime())) return false; // Invalid date string
+      return compareAsc(parsedExpDate, comparisonDate) < 0;
+    } catch (error) {
+      return false; // Error during parsing
+    }
   };
   
-  const isExpiringSoon = (expirationDate?: string, daysThreshold = 90) => {
-    if(!expirationDate) return false;
-    const expDate = parseISO(expirationDate);
-    const today = new Date();
-    const diffTime = expDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 && diffDays <= daysThreshold;
-  }
+  const isExpiringSoonClient = (expirationDate: string | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
+    if (!expirationDate) return false;
+    try {
+      const expDate = parseISO(expirationDate);
+      if (isNaN(expDate.getTime())) return false; // Invalid date string
+      
+      const diffTime = expDate.getTime() - comparisonDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 0 && diffDays <= daysThreshold;
+    } catch (error) {
+      return false; // Error during parsing or calculation
+    }
+  };
 
 
   return (
@@ -103,7 +121,14 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                 </TableHeader>
                 <TableBody>
                   {processedHistory.map((record) => (
-                    <TableRow key={record.id} className={cn(isExpired(record.expirationDate) && record.type === 'stocked' ? 'bg-red-100 dark:bg-red-900/30' : '')}>
+                    <TableRow 
+                      key={record.id} 
+                      className={cn(
+                        clientNow && record.expirationDate && record.type === 'stocked' && isExpiredClient(record.expirationDate, clientNow) 
+                        ? 'bg-red-100 dark:bg-red-900/30' 
+                        : ''
+                      )}
+                    >
                       <TableCell>{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</TableCell>
                       <TableCell>{record.rxNumber}</TableCell>
                       <TableCell className="text-center text-green-600 font-medium">
@@ -114,14 +139,14 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       </TableCell>
                       <TableCell className="text-center font-semibold">{record.balance}</TableCell>
                       <TableCell>
-                        {record.expirationDate ? (
+                        {record.expirationDate && clientNow ? (
                            <div className={cn("flex items-center gap-1 text-xs", 
-                                isExpired(record.expirationDate) ? "text-red-500" : 
-                                isExpiringSoon(record.expirationDate) ? "text-orange-500" : "text-muted-foreground"
+                                isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" : 
+                                isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
                             )}>
-                             {isExpired(record.expirationDate) && <ShieldAlert className="h-3.5 w-3.5 shrink-0" title="Expirado"/>}
-                             {isExpiringSoon(record.expirationDate) && !isExpired(record.expirationDate) && <AlertTriangle className="h-3.5 w-3.5 shrink-0" title="Expira pronto"/>}
-                             {!isExpired(record.expirationDate) && !isExpiringSoon(record.expirationDate) && <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                             {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3.5 w-3.5 shrink-0" title="Expirado"/>}
+                             {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3.5 w-3.5 shrink-0" title="Expira pronto"/>}
+                             {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" title="Vigente"/>}
                             {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
                            </div>
                         ) : (
@@ -151,3 +176,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
