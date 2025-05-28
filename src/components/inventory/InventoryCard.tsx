@@ -34,6 +34,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   );
 
   let runningBalance = 0;
+  // processedHistory will now be in ascending chronological order (oldest first, newest last)
   const processedHistory: ProcessedRecord[] = sortedHistory.map(record => {
     if (record.type === 'stocked') {
       runningBalance += record.quantity;
@@ -41,7 +42,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       runningBalance -= record.quantity;
     }
     return { ...record, balance: runningBalance };
-  }).sort((a,b) => compareAsc(parseISO(b.date), parseISO(a.date))); // Then sort descending for display (most recent first)
+  });
 
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
@@ -106,9 +107,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-foreground mb-2">Historial de Transacciones:</h4>
           {processedHistory.length > 0 ? (
-            <ScrollArea className="h-[200px] w-full rounded-md border p-1">
+            <ScrollArea className="h-[200px] w-full rounded-md border">
               <Table className="text-sm">
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow>
                     <TableHead className="w-[80px]">Fecha</TableHead>
                     <TableHead>ID Rx/Lote</TableHead>
