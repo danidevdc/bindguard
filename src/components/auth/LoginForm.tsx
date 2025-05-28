@@ -12,41 +12,37 @@ import { useToast } from '@/hooks/use-toast';
 export default function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { login, isLoading } = useAuth();
   const { toast } = useToast();
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!username || !password) {
       toast({
-        title: "Login Error",
-        description: "Please enter both username and password.",
+        title: "Error de Inicio de Sesión",
+        description: "Por favor, ingresa usuario y contraseña.",
         variant: "destructive",
       });
       return;
     }
-    // In a real app, you'd validate credentials here
-    login(username, password);
-    toast({
-      title: "Login Successful",
-      description: "Welcome back!",
-    });
+    await login(username, password);
+    // Toast for success/failure is handled within useAuth's login
   };
 
   return (
     <Card className="shadow-xl">
       <CardHeader>
-        <CardTitle className="text-2xl text-center">Login</CardTitle>
-        <CardDescription className="text-center">Enter your credentials to access the system.</CardDescription>
+        <CardTitle className="text-2xl text-center">Iniciar Sesión</CardTitle>
+        <CardDescription className="text-center">Ingresa tus credenciales para acceder al sistema.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">Usuario</Label>
             <Input
               id="username"
               type="text"
-              placeholder="Enter your username"
+              placeholder="Ingresa tu usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -54,20 +50,20 @@ export default function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Ingresa tu contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               className="bg-background"
             />
           </div>
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading}>
             <LogIn className="mr-2 h-5 w-5" />
-            Sign In
+            {isLoading ? 'Verificando...' : 'Ingresar'}
           </Button>
         </form>
       </CardContent>
