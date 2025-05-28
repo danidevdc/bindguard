@@ -1,19 +1,56 @@
+
 "use client";
 
-import type { Medicine } from '@/lib/placeholder-data';
+import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, CalendarDays, ArrowDownCircle, ArrowUpCircle, AlertTriangle, UserCircle } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { format, parseISO, compareAsc } from 'date-fns';
+import { es } from 'date-fns/locale'; // For Spanish date formatting
 
 interface InventoryCardProps {
   medicine: Medicine;
 }
 
+interface ProcessedRecord extends DispensingRecord {
+  balance: number;
+}
+
 export default function InventoryCard({ medicine }: InventoryCardProps) {
   const stockLevelAlertThreshold = 10; // Example threshold
+
+  // Sort history chronologically (oldest first) to calculate running balance correctly
+  const sortedHistory = [...medicine.dispensingHistory].sort((a, b) => 
+    compareAsc(parseISO(a.date), parseISO(b.date))
+  );
+
+  let runningBalance = 0;
+  const processedHistory: ProcessedRecord[] = sortedHistory.map(record => {
+    if (record.type === 'stocked') {
+      runningBalance += record.quantity;
+    } else if (record.type === 'dispensed') {
+      runningBalance -= record.quantity;
+    }
+    return { ...record, balance: runningBalance };
+  }).sort((a,b) => compareAsc(parseISO(b.date), parseISO(a.date))); // Then sort descending for display (most recent first)
+
+
+  const isExpired = (expirationDate?: string) => {
+    if (!expirationDate) return false;
+    return compareAsc(parseISO(expirationDate), new Date()) < 0;
+  };
+  
+  const isExpiringSoon = (expirationDate?: string, daysThreshold = 90) => {
+    if(!expirationDate) return false;
+    const expDate = parseISO(expirationDate);
+    const today = new Date();
+    const diffTime = expDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 && diffDays <= daysThreshold;
+  }
+
 
   return (
     <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -21,7 +58,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-xl text-primary">{medicine.name}</CardTitle>
-            <CardDescription>{medicine.description || 'No description available.'}</CardDescription>
+            <CardDescription>{medicine.description || 'Sin descripción.'}</CardDescription>
           </div>
           <Badge 
             variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
@@ -50,36 +87,52 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         
         <div>
           <h4 className="font-medium text-foreground mb-2">Historial de Transacciones:</h4>
-          {medicine.dispensingHistory.length > 0 ? (
-            <ScrollArea className="h-[150px] w-full rounded-md border p-1">
+          {processedHistory.length > 0 ? (
+            <ScrollArea className="h-[200px] w-full rounded-md border p-1">
               <Table className="text-sm">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[80px]">Fecha</TableHead>
-                    <TableHead>ID Rx/Stock</TableHead>
+                    <TableHead>ID Rx/Lote</TableHead>
+                    <TableHead className="text-center w-[60px]">Entrada</TableHead>
+                    <TableHead className="text-center w-[60px]">Salida</TableHead>
+                    <TableHead className="text-center w-[60px]">Saldo</TableHead>
+                    <TableHead className="w-[90px]">Fecha Exp.</TableHead>
                     <TableHead className="w-[80px]">Usuario</TableHead>
-                    <TableHead className="text-right w-[50px]">Cant.</TableHead>
-                    <TableHead className="text-right w-[50px]">Tipo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {medicine.dispensingHistory.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell>{format(parseISO(record.date), 'MM/dd/yy')}</TableCell>
+                  {processedHistory.map((record) => (
+                    <TableRow key={record.id} className={cn(isExpired(record.expirationDate) && record.type === 'stocked' ? 'bg-red-100 dark:bg-red-900/30' : '')}>
+                      <TableCell>{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</TableCell>
                       <TableCell>{record.rxNumber}</TableCell>
+                      <TableCell className="text-center text-green-600 font-medium">
+                        {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
+                      </TableCell>
+                      <TableCell className="text-center text-red-600 font-medium">
+                        {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-1"/>{record.quantity}</> : '-'}
+                      </TableCell>
+                      <TableCell className="text-center font-semibold">{record.balance}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        {record.expirationDate ? (
+                           <div className={cn("flex items-center gap-1 text-xs", 
+                                isExpired(record.expirationDate) ? "text-red-500" : 
+                                isExpiringSoon(record.expirationDate) ? "text-orange-500" : "text-muted-foreground"
+                            )}>
+                             {isExpired(record.expirationDate) && <ShieldAlert className="h-3.5 w-3.5 shrink-0" title="Expirado"/>}
+                             {isExpiringSoon(record.expirationDate) && !isExpired(record.expirationDate) && <AlertTriangle className="h-3.5 w-3.5 shrink-0" title="Expira pronto"/>}
+                             {!isExpired(record.expirationDate) && !isExpiringSoon(record.expirationDate) && <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                            {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
+                           </div>
+                        ) : (
+                          record.type === 'stocked' ? <span className="text-xs text-muted-foreground">N/A</span> : ''
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-xs">
                            <UserCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0"/> 
                            {record.userName || 'N/A'}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">{record.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        {record.type === 'dispensed' ? (
-                          <ArrowDownCircle className="h-4 w-4 text-red-500 inline" title="Dispensado" />
-                        ) : (
-                          <ArrowUpCircle className="h-4 w-4 text-green-500 inline" title="Abastecido" />
-                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -93,7 +146,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       </CardContent>
       <CardFooter className="text-xs text-muted-foreground border-t pt-3">
         <CalendarDays className="h-4 w-4 mr-1.5" />
-        Última Actualización: {format(parseISO(medicine.lastUpdated), 'PPP')}
+        Última Actualización General: {format(parseISO(medicine.lastUpdated), 'PPP', { locale: es })}
       </CardFooter>
     </Card>
   );
