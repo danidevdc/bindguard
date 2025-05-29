@@ -5,8 +5,6 @@ import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-// ScrollArea no se usará directamente para la tabla principal aquí para simplificar el control de overflow.
-// import { ScrollArea } from '@/components/ui/scroll-area'; 
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download } from 'lucide-react';
 import { format, parseISO, compareAsc } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -157,7 +155,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           </div>
           <div className="flex-shrink-0 flex flex-col items-end">
             <Badge
-              variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
+              variant={"secondary"}
               className="whitespace-nowrap text-xs px-2 py-0.5 mb-1.5" 
             >
               ID: {medicine.id}
@@ -194,17 +192,15 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
-            // Contenedor para la tabla con overflow para ambos ejes y altura fija
-            // La altura es una aproximación: (altura deseada del cuerpo) + (altura del thead) + (borde)
             <div className="rounded-md border overflow-auto h-[calc(120px+2.5rem+2px)] md:h-[calc(148px+2.5rem+2px)]">
-              <table className="text-xs md:text-sm table-fixed min-w-max"> {/* min-w-max permite que la tabla se expanda al contenido */}
+              <table className="text-xs md:text-sm table-fixed min-w-max w-full">
                 <thead className="bg-card sticky top-0 z-10">
                   <tr className="border-b"> 
                     <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                    <th className="min-w-[110px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">ID Rx/Lote</th>
-                    <th className="min-w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
-                    <th className="min-w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
-                    <th className="min-w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
+                    <th className="min-w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">ID Rx/Lote</th>
+                    <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
+                    <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
+                    <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
                     <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha Exp.</th>
                     <th className="min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
                   </tr>
@@ -221,14 +217,14 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       )}
                     >
                       <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                      <td className="min-w-[110px] p-2 align-middle break-words">{record.rxNumber}</td> {/* break-words para Rx/Lote largo */}
-                      <td className="text-center min-w-[75px] p-1 align-middle text-green-600 font-medium whitespace-nowrap">
+                      <td className="min-w-[90px] p-2 align-middle break-words">{record.rxNumber}</td>
+                      <td className="text-center min-w-[70px] p-1 align-middle text-green-600 font-medium whitespace-nowrap">
                         {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                       </td>
-                      <td className="text-center min-w-[75px] p-1 align-middle text-red-600 font-medium whitespace-nowrap">
+                      <td className="text-center min-w-[70px] p-1 align-middle text-red-600 font-medium whitespace-nowrap">
                         {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                       </td>
-                      <td className="text-center font-semibold min-w-[75px] p-1 align-middle whitespace-nowrap">{record.balance}</td>
+                      <td className="text-center font-semibold min-w-[70px] p-1 align-middle whitespace-nowrap">{record.balance}</td>
                       <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">
                         {record.expirationDate && clientNow ? (
                           <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap", 
@@ -244,7 +240,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                            <span className="text-xs text-muted-foreground">N/A</span>
                         )}
                       </td>
-                      <td className="min-w-[100px] p-2 align-middle break-words"> {/* break-words para nombre de usuario largo */}
+                      <td className="min-w-[100px] p-2 align-middle break-words"> 
                         <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap"> 
                           <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                           {record.userName || 'N/A'}
