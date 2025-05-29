@@ -48,28 +48,28 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
-    if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
+    if (!comparisonDate || isNaN(comparisonDate.getTime())) return false; // Check if comparisonDate is valid
     try {
       const parsedExpDate = parseISO(expirationDate);
-      if (isNaN(parsedExpDate.getTime())) return false;
+      if (isNaN(parsedExpDate.getTime())) return false; // Check if parsedExpDate is valid
       return compareAsc(parsedExpDate, comparisonDate) < 0;
     } catch (error) {
-      return false;
+      return false; // Handle potential errors from parseISO
     }
   };
   
   const isExpiringSoonClient = (expirationDate: string | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
     if (!expirationDate) return false;
-    if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
+    if (!comparisonDate || isNaN(comparisonDate.getTime())) return false; // Check if comparisonDate is valid
     try {
       const expDate = parseISO(expirationDate);
-      if (isNaN(expDate.getTime())) return false;
+      if (isNaN(expDate.getTime())) return false; // Check if expDate is valid
       
       const diffTime = expDate.getTime() - comparisonDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 0 && diffDays <= daysThreshold;
     } catch (error) {
-      return false;
+      return false; // Handle potential errors from parseISO
     }
   };
 
@@ -191,10 +191,10 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
-          <div className="overflow-auto rounded-md border max-h-60 bg-card"> {/* max-h-60 reduces empty space */}
+          <div className="overflow-auto rounded-md border max-h-60 bg-card"> {/* Reduced max-h */}
             <table className="w-full min-w-max table-fixed text-xs md:text-sm">
               <thead className="bg-card sticky top-0 z-10">
-                <tr className="border-b h-10">
+                <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]"> {/* Replaced border-b with box-shadow */}
                   <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
                   <th className="min-w-[105px] px-2 text-left align-middle font-medium text-muted-foreground">
                     <span className="block md:hidden">Nº<br />RECETA</span>
@@ -204,10 +204,10 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
                   <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
                   <th className="min-w-[95px] px-2 text-left align-middle font-medium text-muted-foreground">
-                    <span className="block md:hidden">Fecha<br />Exp.</span>
-                    <span className="hidden md:inline whitespace-nowrap">Fecha Exp.</span>
+                     <span className="block md:hidden">Fecha<br />Exp.</span>
+                     <span className="hidden md:inline whitespace-nowrap">Fecha Exp.</span>
                   </th>
-                  <th className="min-w-[100px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
+                  <th className="min-w-[100px] pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th> {/* Changed px-2 to pl-2 pr-4 */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -244,7 +244,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                          <span className="text-xs text-muted-foreground">N/A</span>
                       )}
                     </td>
-                    <td className="min-w-[100px] p-2 align-middle whitespace-nowrap"> 
+                    <td className="min-w-[100px] pl-2 pr-4 py-2 align-middle whitespace-nowrap"> {/* Changed px-2 to pl-2 pr-4 and p-2 to py-2 pl-2 pr-4 */}
                       <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
                         <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                         {record.userName || 'N/A'}
@@ -267,6 +267,5 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-    
 
     
