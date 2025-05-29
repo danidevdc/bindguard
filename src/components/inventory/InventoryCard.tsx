@@ -30,7 +30,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     setClientNow(new Date());
   }, []);
 
-  // Ensure dispensingHistory is sorted by date for balance calculation and display
   const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) =>
     compareAsc(parseISO(a.date), parseISO(b.date))
   );
@@ -45,7 +44,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
-  // The history to display is already sorted chronologically (oldest first)
   const displayHistory = processedHistoryWithBalance;
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
@@ -111,13 +109,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
     const worksheet = XLSX.utils.aoa_to_sheet(dataForExcel);
     worksheet['!cols'] = [
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 8 },
-      { wch: 8 },
-      { wch: 8 },
-      { wch: 12 },
-      { wch: 15 }
+      { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 15 }
     ];
 
     const headerCellStyle = { font: { bold: true } };
@@ -193,8 +185,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
-          {/* Increased padding on the scroll container to p-1 */}
-          <div className="overflow-auto rounded-md border border-border max-h-60 bg-card p-1">
+          <div className="overflow-auto rounded-md border max-h-60 bg-card p-px"> 
             <table className="w-full min-w-max table-fixed">
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
@@ -210,17 +201,15 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                      <span className="block md:hidden">Fecha<br />Exp.</span>
                      <span className="hidden md:inline whitespace-nowrap">Fecha Exp.</span>
                   </th>
-                  {/* Added pr-4 to user column header for more right padding */}
                   <th className="min-w-[100px] pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="[&_tr:last-child]:border-b-0">
                 {displayHistory.map((record) => (
-                  // Using box-shadow for row separator instead of border-b
                   <tr
                     key={record.id}
                     className={cn(
-                      "shadow-[0_1px_0_0_hsl(var(--border))]", 
+                      "border-b border-border", 
                       clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
                       ? 'bg-red-100 dark:bg-red-900/30'
                       : ''
@@ -250,7 +239,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                          <span className="text-xs text-muted-foreground">N/A</span>
                       )}
                     </td>
-                    {/* Added pr-4 to user column cell for more right padding */}
                     <td className="min-w-[100px] py-2 pl-2 pr-4 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs">
                         <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
