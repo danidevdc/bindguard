@@ -193,15 +193,15 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
-            <div className="rounded-md border overflow-auto h-[calc(140px+2.5rem+2px)] md:h-[calc(168px+2.5rem+2px)]">
+            <div className="overflow-auto rounded-md border h-[240px] md:h-[280px]"> {/* Container for scroll, fixed height */}
               <table className="w-full min-w-max text-xs md:text-sm table-fixed">
                 <thead className="bg-card sticky top-0 z-10">
-                  <tr className="border-b"> 
+                  <tr className="border-b h-10"> 
                     <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                    <th className="min-w-[105px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Nª RECETA</th>
-                    <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
-                    <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
-                    <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
+                    <th className="min-w-[70px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Nª<br />RECETA</th>
+                    <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
+                    <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
+                    <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
                     <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha Exp.</th>
                     <th className="min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
                   </tr>
@@ -211,21 +211,21 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     <tr
                       key={record.id}
                       className={cn(
+                        'border-b',
                         clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
                         ? 'bg-red-100 dark:bg-red-900/30'
-                        : '',
-                        'border-b'
+                        : ''
                       )}
                     >
                       <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                      <td className="min-w-[105px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
-                      <td className="text-center min-w-[70px] p-1 align-middle text-green-600 font-medium whitespace-nowrap">
+                      <td className="min-w-[70px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
+                      <td className="min-w-[70px] text-center p-1 align-middle text-green-600 font-medium whitespace-nowrap">
                         {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                       </td>
-                      <td className="text-center min-w-[70px] p-1 align-middle text-red-600 font-medium whitespace-nowrap">
+                      <td className="min-w-[70px] text-center p-1 align-middle text-red-600 font-medium whitespace-nowrap">
                         {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                       </td>
-                      <td className="text-center font-semibold min-w-[70px] p-1 align-middle whitespace-nowrap">{record.balance}</td>
+                      <td className="min-w-[70px] text-center font-semibold p-1 align-middle whitespace-nowrap">{record.balance}</td>
                       <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">
                         {record.expirationDate && clientNow ? (
                           <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap", 
@@ -264,6 +264,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
-
-    
