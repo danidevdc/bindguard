@@ -170,9 +170,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md">
           <div className="flex items-center space-x-2 text-foreground">
             <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-primary" />
-            <span className="font-medium">Stock Actual:</span>
+            <span className="font-medium text-sm md:text-base">Stock Actual:</span>
           </div>
-          <span className={`text-2xl font-bold ${medicine.currentStock <= stockLevelAlertThreshold ? 'text-destructive' : 'text-primary'}`}>
+          <span className={`text-xl md:text-2xl font-bold ${medicine.currentStock <= stockLevelAlertThreshold ? 'text-destructive' : 'text-primary'}`}>
             {medicine.currentStock}
           </span>
         </div>
@@ -184,9 +184,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         )}
 
         <div>
-          <h4 className="font-medium text-foreground mb-2">Historial de Transacciones:</h4>
-          <div className="overflow-auto rounded-md border max-h-60 bg-card p-px"> 
-            <table className="w-full min-w-max table-fixed">
+          <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
+          <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
+            <table className="w-full min-w-max table-fixed text-sm">
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
                   <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
@@ -209,21 +209,21 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   <tr
                     key={record.id}
                     className={cn(
-                      "border-b border-border", 
+                      "border-b border-border",
                       clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
                       ? 'bg-red-100 dark:bg-red-900/30'
                       : ''
                     )}
                   >
-                    <td className="min-w-[90px] px-2 py-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                    <td className="min-w-[105px] px-2 py-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
-                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-green-600 font-medium whitespace-nowrap">
+                    <td className="min-w-[90px] px-2 py-2 align-middle whitespace-nowrap text-xs">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                    <td className="min-w-[105px] px-2 py-2 align-middle whitespace-nowrap text-xs">{record.rxNumber}</td>
+                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs">
                       {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
-                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-red-600 font-medium whitespace-nowrap">
+                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-red-600 font-medium whitespace-nowrap text-xs">
                       {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
-                    <td className="min-w-[70px] text-center font-semibold px-2 py-2 align-middle whitespace-nowrap">{record.balance}</td>
+                    <td className="min-w-[70px] text-center font-semibold px-2 py-2 align-middle whitespace-nowrap text-xs">{record.balance}</td>
                     <td className="min-w-[95px] px-2 py-2 align-middle whitespace-nowrap">
                       {record.expirationDate && clientNow ? (
                         <div className={cn("flex items-center gap-1 text-xs whitespace-nowrap",
@@ -262,5 +262,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
-    
