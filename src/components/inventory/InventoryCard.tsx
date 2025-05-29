@@ -30,7 +30,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     setClientNow(new Date());
   }, []);
 
-  // Sort history ascending by date to calculate running balance correctly
   const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) =>
     compareAsc(parseISO(a.date), parseISO(b.date))
   );
@@ -45,10 +44,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
-  // For display, reverse the order so newest appear first, or keep as is for oldest first.
-  // User requested newest at the bottom, so processedHistoryWithBalance (sorted oldest to newest) is correct for display.
   const displayHistory = processedHistoryWithBalance;
-
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
@@ -113,13 +109,13 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
     const worksheet = XLSX.utils.aoa_to_sheet(dataForExcel);
     worksheet['!cols'] = [
-      { wch: 25 }, 
+      { wch: 15 }, 
       { wch: 15 }, 
       { wch: 8 },  
       { wch: 8 },  
       { wch: 8 },  
-      { wch: 10 }, 
-      { wch: 12 }  
+      { wch: 12 }, 
+      { wch: 15 }  
     ];
     
     const headerCellStyle = { font: { bold: true } };
@@ -196,12 +192,13 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
-            <div className="rounded-md border overflow-auto h-[calc(120px+2.5rem+2px)] md:h-[calc(148px+2.5rem+2px)]">
+          {displayHistory.length > 0 ? (
+            <div className="rounded-md border overflow-auto h-[calc(140px+2.5rem+2px)] md:h-[calc(168px+2.5rem+2px)]">
               <table className="w-full min-w-max text-xs md:text-sm table-fixed">
                 <thead className="bg-card sticky top-0 z-10">
                   <tr className="border-b"> 
                     <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                    <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Nª RECETA</th>
+                    <th className="min-w-[105px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Nª RECETA</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
@@ -221,7 +218,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       )}
                     >
                       <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                      <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
+                      <td className="min-w-[105px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
                       <td className="text-center min-w-[70px] p-1 align-middle text-green-600 font-medium whitespace-nowrap">
                         {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                       </td>
@@ -244,7 +241,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                            <span className="text-xs text-muted-foreground">N/A</span>
                         )}
                       </td>
-                      <td className="min-w-[100px] p-2 align-middle whitespace-nowrap break-words"> 
+                      <td className="min-w-[100px] p-2 align-middle whitespace-nowrap"> 
                         <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
                           <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                           {record.userName || 'N/A'}
@@ -267,3 +264,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
+
+    
