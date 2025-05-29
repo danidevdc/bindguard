@@ -192,67 +192,68 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
-          {displayHistory.length > 0 ? (
-            <div className="overflow-auto rounded-md border h-[240px] md:h-[280px]"> {/* Container for scroll, fixed height */}
-              <table className="w-full min-w-max text-xs md:text-sm table-fixed">
-                <thead className="bg-card sticky top-0 z-10">
-                  <tr className="border-b h-10"> 
-                    <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                    <th className="min-w-[70px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Nª<br />RECETA</th>
-                    <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
-                    <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
-                    <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
-                    <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha Exp.</th>
-                    <th className="min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayHistory.map((record) => (
-                    <tr
-                      key={record.id}
-                      className={cn(
-                        'border-b',
-                        clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
-                        ? 'bg-red-100 dark:bg-red-900/30'
-                        : ''
-                      )}
-                    >
-                      <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                      <td className="min-w-[70px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
-                      <td className="min-w-[70px] text-center p-1 align-middle text-green-600 font-medium whitespace-nowrap">
-                        {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
-                      </td>
-                      <td className="min-w-[70px] text-center p-1 align-middle text-red-600 font-medium whitespace-nowrap">
-                        {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
-                      </td>
-                      <td className="min-w-[70px] text-center font-semibold p-1 align-middle whitespace-nowrap">{record.balance}</td>
-                      <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">
-                        {record.expirationDate && clientNow ? (
-                          <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap", 
-                                isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
-                                isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
-                            )}>
-                            {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
-                            {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                            {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
-                            {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
-                          </div>
-                        ) : (
-                           <span className="text-xs text-muted-foreground">N/A</span>
-                        )}
-                      </td>
-                      <td className="min-w-[100px] p-2 align-middle whitespace-nowrap"> 
-                        <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
-                          <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
-                          {record.userName || 'N/A'}
+          <div className="overflow-auto rounded-md border" style={{ height: 'calc(240px + 2.5rem)' }}> {/* 2.5rem is approx h-10 for thead */}
+            <table className="w-full min-w-max text-xs md:text-sm table-fixed">
+              <thead className="bg-card sticky top-0 z-10">
+                <tr className="border-b h-10"> 
+                  <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
+                  <th className="min-w-[105px] h-10 px-1 text-left align-middle font-medium text-muted-foreground">
+                    <span className="block md:hidden">Nª<br />RECETA</span>
+                    <span className="hidden md:inline whitespace-nowrap">Nª RECETA</span>
+                  </th>
+                  <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
+                  <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
+                  <th className="min-w-[70px] h-10 px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
+                  <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha Exp.</th>
+                  <th className="min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {displayHistory.map((record) => (
+                  <tr
+                    key={record.id}
+                    className={cn(
+                      clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
+                      ? 'bg-red-100 dark:bg-red-900/30'
+                      : ''
+                    )}
+                  >
+                    <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                    <td className="min-w-[105px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
+                    <td className="min-w-[70px] text-center p-1 align-middle text-green-600 font-medium whitespace-nowrap">
+                      {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
+                    </td>
+                    <td className="min-w-[70px] text-center p-1 align-middle text-red-600 font-medium whitespace-nowrap">
+                      {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
+                    </td>
+                    <td className="min-w-[70px] text-center font-semibold p-1 align-middle whitespace-nowrap">{record.balance}</td>
+                    <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">
+                      {record.expirationDate && clientNow ? (
+                        <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap", 
+                              isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
+                              isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
+                          )}>
+                          {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
+                          {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
+                          {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                          {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
+                      ) : (
+                         <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
+                    </td>
+                    <td className="min-w-[100px] p-2 align-middle whitespace-nowrap"> 
+                      <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
+                        <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
+                        {record.userName || 'N/A'}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {displayHistory.length === 0 && (
             <p className="text-xs md:text-sm text-muted-foreground text-center py-4">Sin historial de transacciones.</p>
           )}
         </div>
@@ -264,3 +265,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
