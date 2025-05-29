@@ -30,6 +30,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     setClientNow(new Date());
   }, []);
 
+  // Sort history ascending by date to calculate running balance correctly
   const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) =>
     compareAsc(parseISO(a.date), parseISO(b.date))
   );
@@ -44,12 +45,13 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
+  // For display, reverse the order so newest appear first, or keep as is for oldest first.
+  // User requested newest at the bottom, so processedHistoryWithBalance (sorted oldest to newest) is correct for display.
   const displayHistory = processedHistoryWithBalance;
 
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
-    // Check if comparisonDate is valid before using it
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     try {
       const parsedExpDate = parseISO(expirationDate);
@@ -62,7 +64,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   
   const isExpiringSoonClient = (expirationDate: string | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
     if (!expirationDate) return false;
-    // Check if comparisonDate is valid
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     try {
       const expDate = parseISO(expirationDate);
@@ -91,7 +92,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       ["Historial de Transacciones"], 
     ];
 
-    const historyHeaders = ["Fecha", "ID Rx/Lote", "Entrada", "Salida", "Saldo", "Fecha Exp.", "Usuario"];
+    const historyHeaders = ["Fecha", "Nª RECETA", "Entrada", "Salida", "Saldo", "Fecha Exp.", "Usuario"];
     dataForExcel.push(historyHeaders);
 
     displayHistory.forEach(record => {
@@ -195,13 +196,12 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
-          {displayHistory.length > 0 ? (
             <div className="rounded-md border overflow-auto h-[calc(120px+2.5rem+2px)] md:h-[calc(148px+2.5rem+2px)]">
-              <table className="text-xs md:text-sm table-fixed min-w-max w-full">
+              <table className="w-full min-w-max text-xs md:text-sm table-fixed">
                 <thead className="bg-card sticky top-0 z-10">
                   <tr className="border-b"> 
                     <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                    <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">ID Rx/Lote</th>
+                    <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Nª RECETA</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
@@ -244,8 +244,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                            <span className="text-xs text-muted-foreground">N/A</span>
                         )}
                       </td>
-                      <td className="min-w-[100px] p-2 align-middle break-words"> 
-                        <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap"> 
+                      <td className="min-w-[100px] p-2 align-middle whitespace-nowrap break-words"> 
+                        <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
                           <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                           {record.userName || 'N/A'}
                         </div>
