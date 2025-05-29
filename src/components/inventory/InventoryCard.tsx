@@ -4,15 +4,15 @@
 import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button'; // Import Button
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download } from 'lucide-react';
 import { format, parseISO, compareAsc } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
-import * as XLSX from 'xlsx'; // Import xlsx
+import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 interface InventoryCardProps {
   medicine: Medicine;
@@ -31,7 +31,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     setClientNow(new Date());
   }, []);
 
-  // Calculate processed history for balance and sort by date ASC for correct balance calculation
   const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) =>
     compareAsc(parseISO(a.date), parseISO(b.date))
   );
@@ -46,10 +45,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
-  // For display, sort by date DESC (most recent first for rendering, if needed, or keep ASC for chronological)
-  // User requested latest at the bottom, so ASC is correct for display order.
   const displayHistory = processedHistoryWithBalance;
-
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
@@ -87,8 +83,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       ["ID:", medicine.id],
       ["Descripción:", medicine.description || "Sin descripción."],
       ["Stock Actual:", medicine.currentStock],
-      [], // Empty row for spacing
-      ["Historial de Transacciones"], // Title for the table
+      [], 
+      ["Historial de Transacciones"], 
     ];
 
     const historyHeaders = ["Fecha", "ID Rx/Lote", "Entrada", "Salida", "Saldo", "Fecha Exp.", "Usuario"];
@@ -111,42 +107,25 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet(dataForExcel);
-
-    // Set column widths
-    const columnWidths = [
-      { wch: 25 }, // Nombre Medicamento (covers the label and value)
-      { wch: 15 }, // ID Rx/Lote
-      { wch: 8 },  // Entrada
-      { wch: 8 },  // Salida
-      { wch: 8 },  // Saldo
-      { wch: 10 }, // Fecha Exp.
-      { wch: 12 }  // Usuario
-    ];
-    // Apply widths starting from the first column of the history table (column A)
-    // The first row of the table is dataForExcel[6] which is row 7 in Excel.
-    // The first column for actual data is column A.
     worksheet['!cols'] = [
-      { wch: 25 }, // Col A (covers "Nombre Medicamento:" and the history date)
-      { wch: 15 }, // Col B (covers medicine name and history ID Rx/Lote)
-      { wch: 8 },  // Col C (Entrada)
-      { wch: 8 },  // Col D (Salida)
-      { wch: 8 },  // Col E (Saldo)
-      { wch: 10 }, // Col F (Fecha Exp.)
-      { wch: 12 }  // Col G (Usuario)
+      { wch: 25 }, 
+      { wch: 15 }, 
+      { wch: 8 },  
+      { wch: 8 },  
+      { wch: 8 },  
+      { wch: 10 }, 
+      { wch: 12 }  
     ];
     
-    // Basic styling for headers
     const headerCellStyle = { font: { bold: true } };
-    // Medicine details headers (Column A labels)
     if(worksheet['A1']) worksheet['A1'].s = headerCellStyle;
     if(worksheet['A2']) worksheet['A2'].s = headerCellStyle;
     if(worksheet['A3']) worksheet['A3'].s = headerCellStyle;
     if(worksheet['A4']) worksheet['A4'].s = headerCellStyle;
-    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle; // "Historial de Transacciones" title
+    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle; 
 
-    // Transaction history table headers (Row 7)
-    const historyHeaderRowIndex = 6; // 0-indexed for the array, corresponds to Excel row 7
-    ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter, index) => {
+    const historyHeaderRowIndex = 6; 
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter) => {
       const cellAddress = `${colLetter}${historyHeaderRowIndex + 1}`;
       if (worksheet[cellAddress]) {
         worksheet[cellAddress].s = headerCellStyle;
@@ -171,10 +150,10 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       <CardHeader className="pb-3 md:pb-4">
         <div className="flex justify-between items-start gap-2">
           <div>
-            <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
-            <CardDescription className="text-xs md:text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
+            <CardTitle className="text-base sm:text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
           </div>
-          <div className="text-right">
+          <div className="text-right flex-shrink-0">
             <Badge
               variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
               className="whitespace-nowrap text-xs px-2 py-0.5"
@@ -187,52 +166,52 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
               variant="default"
               className="mt-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
             >
-              <Download className="mr-1.5 h-3.5 w-3.5" />
+              <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
               Descargar Ficha
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow space-y-3 md:space-y-4 px-4 py-3 md:p-6">
+      <CardContent className="flex-grow space-y-3 md:space-y-4 px-2 py-3 sm:px-4 sm:py-3 md:p-6">
         <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md">
           <div className="flex items-center space-x-2 text-foreground">
-            <Package className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-            <span className="font-medium text-sm md:text-base">Stock Actual:</span>
+            <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-primary" />
+            <span className="font-medium text-xs sm:text-sm md:text-base">Stock Actual:</span>
           </div>
-          <span className={`text-xl md:text-2xl font-bold ${medicine.currentStock <= stockLevelAlertThreshold ? 'text-destructive' : 'text-primary'}`}>
+          <span className={`text-lg sm:text-xl md:text-2xl font-bold ${medicine.currentStock <= stockLevelAlertThreshold ? 'text-destructive' : 'text-primary'}`}>
             {medicine.currentStock}
           </span>
         </div>
          {medicine.currentStock <= stockLevelAlertThreshold && (
           <div className="flex items-center text-xs md:text-sm text-destructive p-1.5 md:p-2 rounded-md border border-destructive/50 bg-destructive/10">
-            <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4 mr-2 shrink-0" />
+            <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1.5 sm:mr-2 shrink-0" />
             ¡Alerta de stock bajo!
           </div>
         )}
 
         <div>
-          <h4 className="font-medium text-sm md:text-base text-foreground mb-1.5 md:mb-2">Historial de Transacciones:</h4>
+          <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto"> {/* Added overflow-x-auto here */}
               {/* Table Headers - Fixed */}
-              <div className="bg-card sticky top-0 z-10"> {/* Sticky header container */}
-                <table className="w-full text-xs md:text-sm">
-                  <thead> 
+              <div className="bg-card"> 
+                <table className="w-full text-xs md:text-sm table-fixed sm:table-auto"> {/* table-fixed or table-auto can be experimented with */}
+                  <thead>
                     <tr className="border-b"> 
-                      <th className="w-[70px] md:w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha</th>
-                      <th className="min-w-[90px] md:min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">ID Rx/Lote</th>
-                      <th className="w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Entrada</th>
-                      <th className="w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Salida</th>
-                      <th className="w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Saldo</th>
-                      <th className="w-[80px] md:w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha Exp.</th>
-                      <th className="w-[70px] md:w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Usuario</th>
+                      <th className="w-[70px] sm:w-[75px] md:w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha</th>
+                      <th className="min-w-[80px] sm:min-w-[90px] md:min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">ID Rx/Lote</th>
+                      <th className="w-[55px] sm:w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Entrada</th>
+                      <th className="w-[55px] sm:w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Salida</th>
+                      <th className="w-[55px] sm:w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Saldo</th>
+                      <th className="w-[70px] sm:w-[80px] md:w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha Exp.</th>
+                      <th className="min-w-[70px] sm:min-w-[75px] md:min-w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Usuario</th>
                     </tr>
                   </thead>
                 </table>
               </div>
               {/* Scrollable Table Body */}
-              <ScrollArea className="h-[120px] md:h-[148px] w-full"> {/* Adjusted height for better scroll with fixed header */}
-                <table className="w-full text-xs md:text-sm">
+              <ScrollArea className="h-[110px] sm:h-[120px] md:h-[148px] w-full"> 
+                <table className="w-full text-xs md:text-sm table-fixed sm:table-auto"> {/* Ensure table layout consistency */}
                   <tbody>
                     {displayHistory.map((record) => (
                       <tr
@@ -244,33 +223,33 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                           'border-b'
                         )}
                       >
-                        <td className="w-[70px] md:w-[80px] p-2 md:px-3 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                        <td className="min-w-[90px] md:min-w-[100px] p-2 md:px-3 align-middle">{record.rxNumber}</td>
-                        <td className="text-center w-[60px] md:w-[70px] p-1 md:p-2 align-middle text-green-600 font-medium">
-                          {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5 md:mr-1"/>{record.quantity}</> : '-'}
+                        <td className="w-[70px] sm:w-[75px] md:w-[80px] p-1.5 sm:p-2 md:px-3 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                        <td className="min-w-[80px] sm:min-w-[90px] md:min-w-[100px] p-1.5 sm:p-2 md:px-3 align-middle break-words">{record.rxNumber}</td>
+                        <td className="text-center w-[55px] sm:w-[60px] md:w-[70px] p-1 md:p-2 align-middle text-green-600 font-medium">
+                          {record.type === 'stocked' ? <><TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-0.5 md:mr-1"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="text-center w-[60px] md:w-[70px] p-1 md:p-2 align-middle text-red-600 font-medium">
-                          {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5 md:mr-1"/>{record.quantity}</> : '-'}
+                        <td className="text-center w-[55px] sm:w-[60px] md:w-[70px] p-1 md:p-2 align-middle text-red-600 font-medium">
+                          {record.type === 'dispensed' ? <><TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-0.5 md:mr-1"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="text-center font-semibold w-[60px] md:w-[70px] p-1 md:p-2 align-middle">{record.balance}</td>
-                        <td className="w-[80px] md:w-[90px] p-2 md:px-3 align-middle">
+                        <td className="text-center font-semibold w-[55px] sm:w-[60px] md:w-[70px] p-1 md:p-2 align-middle">{record.balance}</td>
+                        <td className="w-[70px] sm:w-[80px] md:w-[90px] p-1.5 sm:p-2 md:px-3 align-middle">
                           {record.expirationDate && clientNow ? (
-                            <div className={cn("flex items-center gap-1 text-[0.65rem] xs:text-[0.7rem] md:text-xs", 
+                            <div className={cn("flex items-center gap-0.5 sm:gap-1 text-[0.6rem] xs:text-[0.65rem] sm:text-xs", 
                                   isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
                                   isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
                               )}>
-                              {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 shrink-0" title="Expirado"/>}
-                              {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                              {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                              {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 shrink-0" title="Expirado"/>}
+                              {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 shrink-0" title="Expira pronto"/>}
+                              {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
                               {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
                             </div>
                           ) : (
                              <span className="text-xs text-muted-foreground">N/A</span>
                           )}
                         </td>
-                        <td className="w-[70px] md:w-[80px] p-2 md:px-3 align-middle">
-                          <div className="flex items-center gap-1 text-[0.65rem] xs:text-[0.7rem] md:text-xs"> 
-                            <UserCircle className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-muted-foreground shrink-0"/>
+                        <td className="min-w-[70px] sm:min-w-[75px] md:min-w-[80px] p-1.5 sm:p-2 md:px-3 align-middle">
+                          <div className="flex items-center gap-0.5 sm:gap-1 text-[0.6rem] xs:text-[0.65rem] sm:text-xs"> 
+                            <UserCircle className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 text-muted-foreground shrink-0"/>
                             {record.userName || 'N/A'}
                           </div>
                         </td>
@@ -285,10 +264,11 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           )}
         </div>
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground border-t pt-2 md:pt-3 pb-2 md:pb-3 px-4 md:px-6">
-        <CalendarDays className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-        Última Actualización General: {clientNow && medicine.lastUpdated ? format(parseISO(medicine.lastUpdated), 'PPP', { locale: es }) : 'Cargando...'}
+      <CardFooter className="text-xs text-muted-foreground border-t pt-2 md:pt-3 pb-2 md:pb-3 px-2 sm:px-4 md:px-6">
+        <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5" />
+        Última Actualización: {clientNow && medicine.lastUpdated ? format(parseISO(medicine.lastUpdated), 'dd/MM/yy HH:mm', { locale: es }) : 'Cargando...'}
       </CardFooter>
     </Card>
   );
 }
+
