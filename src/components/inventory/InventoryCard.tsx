@@ -5,7 +5,8 @@ import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// ScrollArea no se usará directamente para la tabla principal aquí para simplificar el control de overflow.
+// import { ScrollArea } from '@/components/ui/scroll-area'; 
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download } from 'lucide-react';
 import { format, parseISO, compareAsc } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -45,7 +46,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
-  // Display history in chronological order (oldest first, newest at the bottom)
   const displayHistory = processedHistoryWithBalance;
 
 
@@ -194,70 +194,66 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
-             <div className="rounded-md border overflow-x-auto">
-              <div className="bg-card sticky top-0 z-10"> {/* Fixed header background and positioning */}
-                <table className="text-xs md:text-sm table-fixed"> {/* Removed w-full to allow natural width */}
-                  <thead>
-                    <tr className="border-b"> 
-                      <th className="w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Fecha</th>
-                      <th className="min-w-[110px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">ID Rx/Lote</th>
-                      <th className="w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground">Entrada</th>
-                      <th className="w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground">Salida</th>
-                      <th className="w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground">Saldo</th>
-                      <th className="w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Fecha Exp.</th>
-                      <th className="min-w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Usuario</th>
-                    </tr>
-                  </thead>
-                </table>
-              </div>
-              <ScrollArea className="h-[120px] md:h-[148px]"> {/* Removed w-full, scroll area will take width of its content */}
-                <table className="text-xs md:text-sm table-fixed"> {/* Removed w-full */}
-                  <tbody>
-                    {displayHistory.map((record) => (
-                      <tr
-                        key={record.id}
-                        className={cn(
-                          clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
-                          ? 'bg-red-100 dark:bg-red-900/30'
-                          : '',
-                          'border-b'
-                        )}
-                      >
-                        <td className="w-[85px] p-2 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                        <td className="min-w-[110px] p-2 align-middle break-words">{record.rxNumber}</td>
-                        <td className="text-center w-[75px] p-1 align-middle text-green-600 font-medium">
-                          {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
-                        </td>
-                        <td className="text-center w-[75px] p-1 align-middle text-red-600 font-medium">
-                          {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
-                        </td>
-                        <td className="text-center font-semibold w-[75px] p-1 align-middle">{record.balance}</td>
-                        <td className="w-[95px] p-2 align-middle">
-                          {record.expirationDate && clientNow ? (
-                            <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs", 
-                                  isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
-                                  isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
-                              )}>
-                              {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
-                              {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                              {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
-                              {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
-                            </div>
-                          ) : (
-                             <span className="text-xs text-muted-foreground">N/A</span>
-                          )}
-                        </td>
-                        <td className="min-w-[90px] p-2 align-middle break-words">
-                          <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
-                            <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
-                            {record.userName || 'N/A'}
+            // Contenedor para la tabla con overflow para ambos ejes y altura fija
+            // La altura es una aproximación: (altura deseada del cuerpo) + (altura del thead) + (borde)
+            <div className="rounded-md border overflow-auto h-[calc(120px+2.5rem+2px)] md:h-[calc(148px+2.5rem+2px)]">
+              <table className="text-xs md:text-sm table-fixed min-w-max"> {/* min-w-max permite que la tabla se expanda al contenido */}
+                <thead className="bg-card sticky top-0 z-10">
+                  <tr className="border-b"> 
+                    <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
+                    <th className="min-w-[110px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">ID Rx/Lote</th>
+                    <th className="min-w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
+                    <th className="min-w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
+                    <th className="min-w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
+                    <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha Exp.</th>
+                    <th className="min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayHistory.map((record) => (
+                    <tr
+                      key={record.id}
+                      className={cn(
+                        clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
+                        ? 'bg-red-100 dark:bg-red-900/30'
+                        : '',
+                        'border-b'
+                      )}
+                    >
+                      <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                      <td className="min-w-[110px] p-2 align-middle break-words">{record.rxNumber}</td> {/* break-words para Rx/Lote largo */}
+                      <td className="text-center min-w-[75px] p-1 align-middle text-green-600 font-medium whitespace-nowrap">
+                        {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
+                      </td>
+                      <td className="text-center min-w-[75px] p-1 align-middle text-red-600 font-medium whitespace-nowrap">
+                        {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
+                      </td>
+                      <td className="text-center font-semibold min-w-[75px] p-1 align-middle whitespace-nowrap">{record.balance}</td>
+                      <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">
+                        {record.expirationDate && clientNow ? (
+                          <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap", 
+                                isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
+                                isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
+                            )}>
+                            {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
+                            {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
+                            {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                            {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </ScrollArea>
+                        ) : (
+                           <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
+                      </td>
+                      <td className="min-w-[100px] p-2 align-middle break-words"> {/* break-words para nombre de usuario largo */}
+                        <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap"> 
+                          <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
+                          {record.userName || 'N/A'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p className="text-xs md:text-sm text-muted-foreground text-center py-4">Sin historial de transacciones.</p>
