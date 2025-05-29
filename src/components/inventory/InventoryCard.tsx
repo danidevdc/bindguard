@@ -30,6 +30,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     setClientNow(new Date());
   }, []);
 
+  // Ensure dispensingHistory is sorted by date for balance calculation and display
   const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) =>
     compareAsc(parseISO(a.date), parseISO(b.date))
   );
@@ -44,6 +45,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
+  // The history to display is already sorted chronologically (oldest first)
   const displayHistory = processedHistoryWithBalance;
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
@@ -51,25 +53,25 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     try {
       const parsedExpDate = parseISO(expirationDate);
-      if (isNaN(parsedExpDate.getTime())) return false; 
+      if (isNaN(parsedExpDate.getTime())) return false;
       return compareAsc(parsedExpDate, comparisonDate) < 0;
     } catch (error) {
-      return false; 
+      return false;
     }
   };
-  
+
   const isExpiringSoonClient = (expirationDate: string | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
     if (!expirationDate) return false;
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     try {
       const expDate = parseISO(expirationDate);
-      if (isNaN(expDate.getTime())) return false; 
-      
+      if (isNaN(expDate.getTime())) return false;
+
       const diffTime = expDate.getTime() - comparisonDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 0 && diffDays <= daysThreshold;
     } catch (error) {
-      return false; 
+      return false;
     }
   };
 
@@ -84,8 +86,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       ["ID:", medicine.id],
       ["Descripción:", medicine.description || "Sin descripción."],
       ["Stock Actual:", medicine.currentStock],
-      [], 
-      ["Historial de Transacciones"], 
+      [],
+      ["Historial de Transacciones"],
     ];
 
     const historyHeaders = ["Fecha", "Nº RECETA", "Entrada", "Salida", "Saldo", "Fecha Exp.", "Usuario"];
@@ -95,7 +97,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       const entrada = record.type === 'stocked' ? record.quantity : '';
       const salida = record.type === 'dispensed' ? record.quantity : '';
       const fechaExp = record.expirationDate ? format(parseISO(record.expirationDate), 'MM/yy', { locale: es }) : 'N/A';
-      
+
       dataForExcel.push([
         format(parseISO(record.date), 'dd/MM/yy', { locale: es }),
         record.rxNumber,
@@ -109,23 +111,23 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
     const worksheet = XLSX.utils.aoa_to_sheet(dataForExcel);
     worksheet['!cols'] = [
-      { wch: 15 }, 
-      { wch: 15 }, 
-      { wch: 8 },  
-      { wch: 8 },  
-      { wch: 8 },  
-      { wch: 12 }, 
-      { wch: 15 }  
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 12 },
+      { wch: 15 }
     ];
-    
+
     const headerCellStyle = { font: { bold: true } };
     if(worksheet['A1']) worksheet['A1'].s = headerCellStyle;
     if(worksheet['A2']) worksheet['A2'].s = headerCellStyle;
     if(worksheet['A3']) worksheet['A3'].s = headerCellStyle;
     if(worksheet['A4']) worksheet['A4'].s = headerCellStyle;
-    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle; 
+    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle;
 
-    const historyHeaderRowIndex = 6; 
+    const historyHeaderRowIndex = 6;
     ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter) => {
       const cellAddress = `${colLetter}${historyHeaderRowIndex + 1}`;
       if (worksheet[cellAddress]) {
@@ -156,7 +158,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           <div className="flex-shrink-0 flex flex-col items-end">
             <Badge
               variant={"secondary"}
-              className="whitespace-nowrap text-xs px-2 py-0.5 mb-1.5" 
+              className="whitespace-nowrap text-xs px-2 py-0.5 mb-1.5"
             >
               ID: {medicine.id}
             </Badge>
@@ -191,8 +193,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
-          <div className="overflow-auto rounded-md border max-h-60 bg-card p-px"> {/* Added p-px for slight gap */}
-            <table className="w-full min-w-max table-fixed text-xs md:text-sm">
+          {/* Increased padding on the scroll container to p-1 */}
+          <div className="overflow-auto rounded-md border border-border max-h-60 bg-card p-1">
+            <table className="w-full min-w-max table-fixed">
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
                   <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
@@ -207,32 +210,34 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                      <span className="block md:hidden">Fecha<br />Exp.</span>
                      <span className="hidden md:inline whitespace-nowrap">Fecha Exp.</span>
                   </th>
+                  {/* Added pr-4 to user column header for more right padding */}
                   <th className="min-w-[100px] pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
                 </tr>
               </thead>
-              <tbody className="[&_tr:last-child]:border-b-0"> {/* Removed divide-y, rely on tr border */}
+              <tbody>
                 {displayHistory.map((record) => (
+                  // Using box-shadow for row separator instead of border-b
                   <tr
                     key={record.id}
                     className={cn(
-                      "border-b border-border", // Added explicit border-b to each row
+                      "shadow-[0_1px_0_0_hsl(var(--border))]", 
                       clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
                       ? 'bg-red-100 dark:bg-red-900/30'
                       : ''
                     )}
                   >
-                    <td className="min-w-[90px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                    <td className="min-w-[105px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
-                    <td className="min-w-[70px] text-center p-2 align-middle text-green-600 font-medium whitespace-nowrap">
+                    <td className="min-w-[90px] px-2 py-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                    <td className="min-w-[105px] px-2 py-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
+                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-green-600 font-medium whitespace-nowrap">
                       {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
-                    <td className="min-w-[70px] text-center p-2 align-middle text-red-600 font-medium whitespace-nowrap">
+                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-red-600 font-medium whitespace-nowrap">
                       {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
-                    <td className="min-w-[70px] text-center font-semibold p-2 align-middle whitespace-nowrap">{record.balance}</td>
-                    <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">
+                    <td className="min-w-[70px] text-center font-semibold px-2 py-2 align-middle whitespace-nowrap">{record.balance}</td>
+                    <td className="min-w-[95px] px-2 py-2 align-middle whitespace-nowrap">
                       {record.expirationDate && clientNow ? (
-                        <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap", 
+                        <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap",
                               isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
                               isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
                           )}>
@@ -245,8 +250,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                          <span className="text-xs text-muted-foreground">N/A</span>
                       )}
                     </td>
-                    <td className="min-w-[100px] py-2 pl-2 pr-4 align-middle whitespace-nowrap"> 
-                      <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
+                    {/* Added pr-4 to user column cell for more right padding */}
+                    <td className="min-w-[100px] py-2 pl-2 pr-4 align-middle whitespace-nowrap">
+                      <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs">
                         <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                         {record.userName || 'N/A'}
                       </div>
@@ -268,6 +274,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-    
-
-    
