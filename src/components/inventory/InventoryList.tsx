@@ -42,7 +42,7 @@ export default function InventoryList({ medicines }: InventoryListProps) {
         />
       </div>
       {filteredMedicines.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 max-w-3xl mx-auto"> {/* Ensures single column and centers it with a max width */}
           {filteredMedicines.map((medicine) => (
             <InventoryCard key={medicine.id} medicine={medicine} />
           ))}
