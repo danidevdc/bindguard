@@ -49,6 +49,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
+    // Check if comparisonDate is valid before using it
+    if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     try {
       const parsedExpDate = parseISO(expirationDate);
       if (isNaN(parsedExpDate.getTime())) return false;
@@ -60,6 +62,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   
   const isExpiringSoonClient = (expirationDate: string | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
     if (!expirationDate) return false;
+    // Check if comparisonDate is valid
+    if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     try {
       const expDate = parseISO(expirationDate);
       if (isNaN(expDate.getTime())) return false;
@@ -197,7 +201,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                 <thead className="bg-card sticky top-0 z-10">
                   <tr className="border-b"> 
                     <th className="min-w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                    <th className="min-w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">ID Rx/Lote</th>
+                    <th className="min-w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">ID Rx/Lote</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
                     <th className="min-w-[70px] text-center h-10 px-1 align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
@@ -217,7 +221,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       )}
                     >
                       <td className="min-w-[85px] p-2 align-middle whitespace-nowrap">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                      <td className="min-w-[90px] p-2 align-middle break-words">{record.rxNumber}</td>
+                      <td className="min-w-[95px] p-2 align-middle whitespace-nowrap">{record.rxNumber}</td>
                       <td className="text-center min-w-[70px] p-1 align-middle text-green-600 font-medium whitespace-nowrap">
                         {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                       </td>
@@ -263,5 +267,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
-    
