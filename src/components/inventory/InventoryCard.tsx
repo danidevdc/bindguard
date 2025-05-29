@@ -192,7 +192,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           <div className="overflow-auto rounded-md border max-h-60 bg-card"> {/* max-h-60 reduces empty space */}
-            <table className="min-w-max table-fixed text-xs md:text-sm"> {/* min-w-max allows table to expand */}
+            <table className="w-full min-w-max table-fixed text-xs md:text-sm">
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="border-b h-10">
                   <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
