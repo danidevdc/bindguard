@@ -45,7 +45,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     return { ...record, balance: runningBalance };
   });
 
+  // Display history in chronological order (oldest first, newest at the bottom)
   const displayHistory = processedHistoryWithBalance;
+
 
   const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
     if (!expirationDate) return false;
@@ -153,24 +155,22 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
             <CardTitle className="text-base sm:text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
             <CardDescription className="text-xs sm:text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
           </div>
-          <div className="flex-shrink-0">
-            <div className="flex flex-col items-end">
-              <Badge
-                variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
-                className="whitespace-nowrap text-xs px-2 py-0.5 mb-1.5" 
-              >
-                ID: {medicine.id}
-              </Badge>
-              <Button
-                onClick={handleDownloadExcel}
-                size="sm"
-                variant="default"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
-              >
-                <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                Descargar Ficha
-              </Button>
-            </div>
+          <div className="flex-shrink-0 flex flex-col items-end">
+            <Badge
+              variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
+              className="whitespace-nowrap text-xs px-2 py-0.5 mb-1.5" 
+            >
+              ID: {medicine.id}
+            </Badge>
+            <Button
+              onClick={handleDownloadExcel}
+              size="sm"
+              variant="default"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
+            >
+              <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              Descargar Ficha
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -195,23 +195,23 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
              <div className="rounded-md border overflow-x-auto">
-              <div className="bg-card"> 
-                <table className="w-full text-xs md:text-sm table-fixed">
+              <div className="bg-card sticky top-0 z-10"> {/* Fixed header background and positioning */}
+                <table className="text-xs md:text-sm table-fixed"> {/* Removed w-full to allow natural width */}
                   <thead>
                     <tr className="border-b"> 
-                      <th className="w-[70px] sm:w-[75px] md:w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha</th>
-                      <th className="min-w-[80px] sm:min-w-[90px] md:min-w-[100px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">ID Rx/Lote</th>
-                      <th className="w-[55px] sm:w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Entrada</th>
-                      <th className="w-[55px] sm:w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Salida</th>
-                      <th className="w-[55px] sm:w-[60px] md:w-[70px] text-center h-10 px-1 md:px-2 align-middle font-medium text-muted-foreground md:h-11">Saldo</th>
-                      <th className="w-[70px] sm:w-[80px] md:w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha Exp.</th>
-                      <th className="min-w-[70px] sm:min-w-[75px] md:min-w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Usuario</th>
+                      <th className="w-[85px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Fecha</th>
+                      <th className="min-w-[110px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">ID Rx/Lote</th>
+                      <th className="w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground">Entrada</th>
+                      <th className="w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground">Salida</th>
+                      <th className="w-[75px] text-center h-10 px-1 align-middle font-medium text-muted-foreground">Saldo</th>
+                      <th className="w-[95px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Fecha Exp.</th>
+                      <th className="min-w-[90px] h-10 px-2 text-left align-middle font-medium text-muted-foreground">Usuario</th>
                     </tr>
                   </thead>
                 </table>
               </div>
-              <ScrollArea className="h-[110px] sm:h-[120px] md:h-[148px] w-full"> 
-                <table className="w-full text-xs md:text-sm table-fixed">
+              <ScrollArea className="h-[120px] md:h-[148px]"> {/* Removed w-full, scroll area will take width of its content */}
+                <table className="text-xs md:text-sm table-fixed"> {/* Removed w-full */}
                   <tbody>
                     {displayHistory.map((record) => (
                       <tr
@@ -223,33 +223,33 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                           'border-b'
                         )}
                       >
-                        <td className="w-[70px] sm:w-[75px] md:w-[80px] p-1.5 sm:p-2 md:px-3 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                        <td className="min-w-[80px] sm:min-w-[90px] md:min-w-[100px] p-1.5 sm:p-2 md:px-3 align-middle break-words">{record.rxNumber}</td>
-                        <td className="text-center w-[55px] sm:w-[60px] md:w-[70px] p-1 md:p-2 align-middle text-green-600 font-medium">
-                          {record.type === 'stocked' ? <><TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-0.5 md:mr-1"/>{record.quantity}</> : '-'}
+                        <td className="w-[85px] p-2 align-middle">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                        <td className="min-w-[110px] p-2 align-middle break-words">{record.rxNumber}</td>
+                        <td className="text-center w-[75px] p-1 align-middle text-green-600 font-medium">
+                          {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="text-center w-[55px] sm:w-[60px] md:w-[70px] p-1 md:p-2 align-middle text-red-600 font-medium">
-                          {record.type === 'dispensed' ? <><TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 inline mr-0.5 md:mr-1"/>{record.quantity}</> : '-'}
+                        <td className="text-center w-[75px] p-1 align-middle text-red-600 font-medium">
+                          {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="text-center font-semibold w-[55px] sm:w-[60px] md:w-[70px] p-1 md:p-2 align-middle">{record.balance}</td>
-                        <td className="w-[70px] sm:w-[80px] md:w-[90px] p-1.5 sm:p-2 md:px-3 align-middle">
+                        <td className="text-center font-semibold w-[75px] p-1 align-middle">{record.balance}</td>
+                        <td className="w-[95px] p-2 align-middle">
                           {record.expirationDate && clientNow ? (
-                            <div className={cn("flex items-center gap-0.5 sm:gap-1 text-[0.6rem] xs:text-[0.65rem] sm:text-xs", 
+                            <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs", 
                                   isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
                                   isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
                               )}>
-                              {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 shrink-0" title="Expirado"/>}
-                              {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                              {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                              {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
+                              {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
+                              {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
                               {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
                             </div>
                           ) : (
                              <span className="text-xs text-muted-foreground">N/A</span>
                           )}
                         </td>
-                        <td className="min-w-[70px] sm:min-w-[75px] md:min-w-[80px] p-1.5 sm:p-2 md:px-3 align-middle">
-                          <div className="flex items-center gap-0.5 sm:gap-1 text-[0.6rem] xs:text-[0.65rem] sm:text-xs"> 
-                            <UserCircle className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3.5 md:w-3.5 text-muted-foreground shrink-0"/>
+                        <td className="min-w-[90px] p-2 align-middle break-words">
+                          <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs"> 
+                            <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                             {record.userName || 'N/A'}
                           </div>
                         </td>
@@ -271,3 +271,5 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
+    
