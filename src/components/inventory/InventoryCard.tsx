@@ -144,8 +144,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       <CardHeader className="pb-3 md:pb-4">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-grow">
-            <CardTitle className="text-base sm:text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
+            <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
+            <CardDescription className="text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
           </div>
           <div className="flex-shrink-0 flex flex-col items-end">
             <Badge
@@ -170,9 +170,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md">
           <div className="flex items-center space-x-2 text-foreground">
             <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-primary" />
-            <span className="font-medium text-xs sm:text-sm md:text-base">Stock Actual:</span>
+            <span className="font-medium">Stock Actual:</span>
           </div>
-          <span className={`text-lg sm:text-xl md:text-2xl font-bold ${medicine.currentStock <= stockLevelAlertThreshold ? 'text-destructive' : 'text-primary'}`}>
+          <span className={`text-2xl font-bold ${medicine.currentStock <= stockLevelAlertThreshold ? 'text-destructive' : 'text-primary'}`}>
             {medicine.currentStock}
           </span>
         </div>
@@ -184,7 +184,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         )}
 
         <div>
-          <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
+          <h4 className="font-medium text-foreground mb-2">Historial de Transacciones:</h4>
           <div className="overflow-auto rounded-md border max-h-60 bg-card p-px"> 
             <table className="w-full min-w-max table-fixed">
               <thead className="bg-card sticky top-0 z-10">
@@ -226,7 +226,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     <td className="min-w-[70px] text-center font-semibold px-2 py-2 align-middle whitespace-nowrap">{record.balance}</td>
                     <td className="min-w-[95px] px-2 py-2 align-middle whitespace-nowrap">
                       {record.expirationDate && clientNow ? (
-                        <div className={cn("flex items-center gap-1 text-[0.7rem] sm:text-xs whitespace-nowrap",
+                        <div className={cn("flex items-center gap-1 text-xs whitespace-nowrap",
                               isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
                               isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
                           )}>
@@ -240,7 +240,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       )}
                     </td>
                     <td className="min-w-[100px] py-2 pl-2 pr-4 align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-[0.7rem] sm:text-xs">
+                      <div className="flex items-center gap-1 text-xs">
                         <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                         {record.userName || 'N/A'}
                       </div>
@@ -262,3 +262,5 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
+    
