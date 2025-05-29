@@ -149,26 +149,28 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="pb-3 md:pb-4">
         <div className="flex justify-between items-start gap-2">
-          <div>
+          <div className="flex-grow">
             <CardTitle className="text-base sm:text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
             <CardDescription className="text-xs sm:text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
           </div>
-          <div className="text-right flex-shrink-0">
-            <Badge
-              variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
-              className="whitespace-nowrap text-xs px-2 py-0.5"
-            >
-              ID: {medicine.id}
-            </Badge>
-            <Button
-              onClick={handleDownloadExcel}
-              size="sm"
-              variant="default"
-              className="mt-1.5 bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
-            >
-              <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              Descargar Ficha
-            </Button>
+          <div className="flex-shrink-0">
+            <div className="flex flex-col items-end">
+              <Badge
+                variant={medicine.currentStock <= stockLevelAlertThreshold ? "destructive" : "secondary"}
+                className="whitespace-nowrap text-xs px-2 py-0.5 mb-1.5" 
+              >
+                ID: {medicine.id}
+              </Badge>
+              <Button
+                onClick={handleDownloadExcel}
+                size="sm"
+                variant="default"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
+              >
+                <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                Descargar Ficha
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -192,10 +194,9 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-xs sm:text-sm md:text-base text-foreground mb-1 sm:mb-1.5 md:mb-2">Historial de Transacciones:</h4>
           {displayHistory.length > 0 ? (
-            <div className="rounded-md border overflow-x-auto"> {/* Added overflow-x-auto here */}
-              {/* Table Headers - Fixed */}
+             <div className="rounded-md border overflow-x-auto">
               <div className="bg-card"> 
-                <table className="w-full text-xs md:text-sm table-fixed sm:table-auto"> {/* table-fixed or table-auto can be experimented with */}
+                <table className="w-full text-xs md:text-sm table-fixed">
                   <thead>
                     <tr className="border-b"> 
                       <th className="w-[70px] sm:w-[75px] md:w-[80px] h-10 px-2 text-left align-middle font-medium text-muted-foreground md:h-11 md:px-3">Fecha</th>
@@ -209,9 +210,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   </thead>
                 </table>
               </div>
-              {/* Scrollable Table Body */}
               <ScrollArea className="h-[110px] sm:h-[120px] md:h-[148px] w-full"> 
-                <table className="w-full text-xs md:text-sm table-fixed sm:table-auto"> {/* Ensure table layout consistency */}
+                <table className="w-full text-xs md:text-sm table-fixed">
                   <tbody>
                     {displayHistory.map((record) => (
                       <tr
@@ -271,4 +271,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
