@@ -10,10 +10,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, CalendarIcon, FileText, Package, CheckCircle, AlertTriangle, VideoOff } from 'lucide-react';
+import { Camera, CalendarIcon, FileText, Package, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns'; // Removed parseISO as it's not directly used here for formatting
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; // Import Spanish locale
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 
@@ -252,7 +253,7 @@ export default function ScanForm() {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Elige una fecha</span>}
+                    {date ? format(date, "PPP", { locale: es }) : <span>Elige una fecha</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -261,6 +262,7 @@ export default function ScanForm() {
                     selected={date}
                     onSelect={setDate}
                     initialFocus
+                    locale={es} // Add locale to calendar
                   />
                 </PopoverContent>
               </Popover>
@@ -301,7 +303,7 @@ export default function ScanForm() {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expirationDate ? format(expirationDate, "PPP") : <span>Elige fecha de expiración</span>}
+                    {expirationDate ? format(expirationDate, "PPP", { locale: es }) : <span>Elige fecha de expiración</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -311,6 +313,7 @@ export default function ScanForm() {
                     onSelect={setExpirationDate}
                     initialFocus
                     disabled={(d) => d < new Date(new Date().setDate(new Date().getDate() -1))} // Disable past dates
+                    locale={es} // Add locale to calendar
                   />
                 </PopoverContent>
               </Popover>
