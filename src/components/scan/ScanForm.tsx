@@ -7,17 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-// RadioGroup y Calendar no se usarán directamente en el flujo principal de añadir medicamentos a receta,
-// pero se mantienen por si se quiere re-introducir el modo 'stocking' de forma separada.
-// import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-// import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, FileText, Package, CheckCircle, AlertTriangle, ListPlus, Pill, ShoppingCart, CheckSquare } from 'lucide-react';
+import { Camera, FileText, Package, CheckCircle, AlertTriangle, ListPlus, Pill, ShoppingCart, CheckSquare, CalendarIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// import { cn } from '@/lib/utils';
-// import { format } from 'date-fns';
-// import { es } from 'date-fns/locale'; // Import Spanish locale
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale'; 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -28,6 +25,7 @@ interface MedicineInPrescription {
   id: string; // simple unique id for the list
   details: string;
   quantity: number;
+  transactionDate: string;
 }
 
 type ScanStep = "enterPrescriptionNumber" | "addMedicines" | "finalizePrescription";
@@ -38,7 +36,10 @@ export default function ScanForm() {
   const [prescriptionNumber, setPrescriptionNumber] = useState('');
   const [currentMedicineDetails, setCurrentMedicineDetails] = useState('');
   const [currentQuantity, setCurrentQuantity] = useState('');
+  const [transactionDate, setTransactionDate] = useState<Date | undefined>(undefined);
   const [medicinesInPrescription, setMedicinesInPrescription] = useState<MedicineInPrescription[]>([]);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+
 
   const { toast } = useToast();
   const { getCurrentUser } = useAuth();
@@ -47,6 +48,11 @@ export default function ScanForm() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   // const qrScannerRef = useRef<QrScanner | null>(null);
+
+  useEffect(() => {
+    setClientNow(new Date());
+    setTransactionDate(new Date()); // Default to current date
+  }, []);
 
   // Camera permission logic for QR scanning
   useEffect(() => {
@@ -78,8 +84,6 @@ export default function ScanForm() {
         videoRef.current.srcObject = null;
       }
     }
-    // Cleanup function (optional, depending on QR library)
-    // return () => { /* stop scanner, release camera */ };
   }, [isScanningQR, toast]);
 
 
@@ -106,6 +110,14 @@ export default function ScanForm() {
       });
       return;
     }
+    if (!transactionDate) {
+      toast({
+        title: "Fecha Requerida",
+        description: "Por favor, selecciona una fecha de transacción.",
+        variant: "destructive",
+      });
+      return;
+    }
     const quantityNum = parseInt(currentQuantity);
     if (isNaN(quantityNum) || quantityNum <= 0) {
       toast({
@@ -120,18 +132,17 @@ export default function ScanForm() {
       id: Date.now().toString(), // simple unique id
       details: currentMedicineDetails,
       quantity: quantityNum,
+      transactionDate: transactionDate.toISOString().split('T')[0],
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
-    // Simulate individual inventory update for this medicine
-    // This is where you'd integrate with your actual inventory update logic
     const currentUser = getCurrentUser();
     console.log('Simulating inventory update (dispensing):', {
-      date: new Date().toISOString().split('T')[0],
-      prescriptionNumber: prescriptionNumber, // Link to the main prescription
+      date: transactionDate.toISOString().split('T')[0],
+      prescriptionNumber: prescriptionNumber, 
       quantity: quantityNum,
       medicineDetails: currentMedicineDetails,
-      mode: 'dispensing', // Always dispensing in this flow
+      mode: 'dispensing', 
       userName: currentUser || 'System',
     });
     toast({
@@ -139,10 +150,9 @@ export default function ScanForm() {
       description: `${currentMedicineDetails}, Cant: ${quantityNum} - añadido a la receta. Stock individual actualizado (simulado).`,
     });
 
-    // Reset fields for next medicine
     setCurrentMedicineDetails('');
     setCurrentQuantity('');
-    setIsScanningQR(false); // Close camera if it was open
+    setIsScanningQR(false); 
   };
 
   const handleFinalizePrescription = () => {
@@ -154,8 +164,6 @@ export default function ScanForm() {
       });
       return;
     }
-    // Logic for finalizing prescription. For prototype, just show success and reset.
-    // In a real app, this might trigger generation of a summary document, etc.
     console.log("Prescription Finalized:", {
       prescriptionNumber,
       items: medicinesInPrescription,
@@ -168,13 +176,14 @@ export default function ScanForm() {
       description: `Receta Nº ${prescriptionNumber} con ${medicinesInPrescription.length} medicamento(s) ha sido procesada.`,
       variant: "default"
     });
-    setStep("finalizePrescription"); // Could go to a summary view or back to start
+    setStep("finalizePrescription"); 
   };
   
   const handleStartNewPrescription = () => {
     setPrescriptionNumber('');
     setCurrentMedicineDetails('');
     setCurrentQuantity('');
+    setTransactionDate(clientNow || new Date()); // Reset date to current
     setMedicinesInPrescription([]);
     setStep("enterPrescriptionNumber");
   };
@@ -201,7 +210,7 @@ export default function ScanForm() {
         <CardHeader>
           <CardTitle className="text-xl text-center flex items-center justify-center">
             <FileText className="mr-2 h-6 w-6 text-primary" />
-            Paso 1: Ingresar Número de Receta
+            Ingresar Número de Receta
           </CardTitle>
           <CardDescription className="text-center">
             Ingresa el número de la receta manual o impresa para comenzar.
@@ -237,16 +246,45 @@ export default function ScanForm() {
         <CardHeader>
           <CardTitle className="text-xl text-center flex items-center justify-center">
              <Pill className="mr-2 h-6 w-6 text-primary" />
-            Paso 2: Añadir Medicamentos a Receta Nº {prescriptionNumber}
+            Añadir Medicamentos a Receta Nº {prescriptionNumber}
           </CardTitle>
           <CardDescription className="text-center">
             Escanea el QR de cada medicamento e ingresa la cantidad a dispensar.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Medicine Scanning/Entry Section */}
           <div className="p-4 border rounded-md bg-muted/20 space-y-4">
             <h3 className="text-md font-semibold text-foreground">Registrar Medicamento Actual:</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="transactionDateDispense">Fecha de Transacción</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="transactionDateDispense"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !transactionDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {transactionDate ? format(transactionDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={transactionDate}
+                    onSelect={setTransactionDate}
+                    initialFocus
+                    locale={es}
+                    disabled={(date) => clientNow ? date > clientNow : false} // Prevent selecting future dates
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div className="space-y-2">
               <Label>Código QR / Identificación del Medicamento</Label>
               <div className="flex gap-2">
@@ -302,7 +340,7 @@ export default function ScanForm() {
                   <Input
                     id="quantityInput"
                     type="number"
-                    inputMode="numeric" // Suggest numeric keyboard on mobile
+                    inputMode="numeric" 
                     placeholder="Ingresa cantidad"
                     value={currentQuantity}
                     onChange={(e) => setCurrentQuantity(e.target.value)}
@@ -318,14 +356,13 @@ export default function ScanForm() {
             </Button>
           </div>
 
-          {/* List of medicines added to current prescription */}
           {medicinesInPrescription.length > 0 && (
             <div className="mt-6 space-y-3">
               <h3 className="text-md font-semibold text-foreground">Medicamentos en esta Receta (Nº {prescriptionNumber}):</h3>
               <ul className="list-disc pl-5 space-y-1 text-sm bg-background p-3 rounded-md border max-h-48 overflow-y-auto">
                 {medicinesInPrescription.map((med) => (
                   <li key={med.id}>
-                    {med.details} - Cantidad: {med.quantity}
+                    {med.details} - Cantidad: {med.quantity} (Fecha: {format(parseISO(med.transactionDate), "dd/MM/yy", {locale: es})})
                   </li>
                 ))}
               </ul>
@@ -360,7 +397,7 @@ export default function ScanForm() {
               <ul className="list-none p-3 rounded-md border bg-muted/30 max-h-60 overflow-y-auto text-sm">
                 {medicinesInPrescription.map((med) => (
                   <li key={med.id} className="py-1 border-b last:border-b-0">
-                    <span className="font-medium">{med.details}</span> - Cantidad: {med.quantity}
+                    <span className="font-medium">{med.details}</span> - Cantidad: {med.quantity} (Fecha: {format(parseISO(med.transactionDate), "dd/MM/yy", {locale: es})})
                   </li>
                 ))}
               </ul>
@@ -374,5 +411,6 @@ export default function ScanForm() {
     );
   }
 
-  return null; // Should not happen
+  return null; 
 }
+
