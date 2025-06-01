@@ -186,7 +186,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
           <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
-            <table className="w-full min-w-max table-fixed text-sm">
+            <table className="w-full table-fixed text-sm">
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
                   <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
@@ -201,7 +201,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                      <span className="block md:hidden">Fecha<br />Exp.</span>
                      <span className="hidden md:inline whitespace-nowrap">Fecha Exp.</span>
                   </th>
-                  <th className="min-w-[100px] pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Usuario</th>
+                  <th className="pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap min-w-[100px]">Usuario</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-b-0">
