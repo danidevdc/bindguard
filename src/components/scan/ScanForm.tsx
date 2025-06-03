@@ -6,11 +6,10 @@ from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// import { Textarea } from '@/components/ui/textarea'; // Replaced with Input
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, FileText, Package, CheckCircle, AlertTriangle, ListPlus, Pill, ShoppingCart, CheckSquare, CalendarIcon } from 'lucide-react';
+import { Camera, FileText, Package, CheckCircle, AlertTriangle, ListPlus, Pill, ShoppingCart, CheckSquare, CalendarIcon, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
@@ -18,11 +17,8 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
-// Placeholder for QR Scanner library
-// import QrScanner from 'qr-scanner';
-
 interface MedicineInPrescription {
-  id: string; // simple unique id for the list
+  id: string; 
   details: string;
   quantity: number;
   transactionDate: string;
@@ -47,23 +43,20 @@ export default function ScanForm() {
   const [isScanningQR, setIsScanningQR] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  // const qrScannerRef = useRef<QrScanner | null>(null);
 
   useEffect(() => {
     const today = new Date();
     setClientNow(today);
-    setTransactionDate(today); // Default to current date when component mounts or step changes
+    setTransactionDate(today); 
   }, []);
   
   useEffect(() => {
-    // Also reset transaction date when returning to this step or initializing
-    if (step === "addMedicines") {
+    if (step === "addMedicines" && !transactionDate) {
       setTransactionDate(clientNow || new Date());
     }
-  }, [step, clientNow]);
+  }, [step, clientNow, transactionDate]);
 
 
-  // Camera permission logic for QR scanning
   useEffect(() => {
     if (isScanningQR) {
       const getCameraPermission = async () => {
@@ -73,7 +66,6 @@ export default function ScanForm() {
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
-          // Initialize QR Scanner library here if using one
         } catch (error) {
           console.error('Error accessing camera:', error);
           setHasCameraPermission(false);
@@ -107,7 +99,9 @@ export default function ScanForm() {
       return;
     }
     setStep("addMedicines");
-    setTransactionDate(clientNow || new Date()); // Ensure date is reset for new prescription
+    if (!transactionDate) { // Ensure date is set if not already
+      setTransactionDate(clientNow || new Date());
+    }
     toast({ title: "Receta Iniciada", description: `Procesando receta Nº: ${prescriptionNumber}` });
   };
 
@@ -139,7 +133,7 @@ export default function ScanForm() {
     }
 
     const newMedicineEntry: MedicineInPrescription = {
-      id: Date.now().toString(), // simple unique id
+      id: Date.now().toString(), 
       details: currentMedicineDetails,
       quantity: quantityNum,
       transactionDate: transactionDate.toISOString().split('T')[0],
@@ -163,6 +157,44 @@ export default function ScanForm() {
     setCurrentMedicineDetails('');
     setCurrentQuantity('');
     setIsScanningQR(false); 
+  };
+
+  const handleUpdateMedicineQuantity = (medicineId: string, newQuantityStr: string) => {
+    if (newQuantityStr === "") {
+      // User cleared the input. Snap back to the current valid quantity.
+      setMedicinesInPrescription(prevMeds => [...prevMeds]);
+      return;
+    }
+
+    const newQuantity = parseInt(newQuantityStr);
+
+    if (isNaN(newQuantity) || newQuantity <= 0) {
+      toast({
+        title: "Cantidad Inválida",
+        description: "La cantidad debe ser un número positivo.",
+        variant: "destructive",
+      });
+      setMedicinesInPrescription(prevMeds => [...prevMeds]); // Snap back to current valid state
+      return;
+    }
+
+    setMedicinesInPrescription(prevMeds =>
+      prevMeds.map(med =>
+        med.id === medicineId ? { ...med, quantity: newQuantity } : med
+      )
+    );
+    // Success toast for quantity update can be noisy, so it's omitted here.
+    // User sees the change directly in the input.
+  };
+
+  const handleRemoveMedicineFromPrescription = (medicineId: string) => {
+    setMedicinesInPrescription(prevMeds =>
+      prevMeds.filter(med => med.id !== medicineId)
+    );
+    toast({
+      title: "Medicamento Eliminado",
+      description: "El medicamento ha sido eliminado de la receta.",
+    });
   };
 
   const handleFinalizePrescription = () => {
@@ -193,7 +225,7 @@ export default function ScanForm() {
     setPrescriptionNumber('');
     setCurrentMedicineDetails('');
     setCurrentQuantity('');
-    setTransactionDate(clientNow || new Date()); // Reset date to current
+    setTransactionDate(clientNow || new Date()); 
     setMedicinesInPrescription([]);
     setStep("enterPrescriptionNumber");
   };
@@ -289,7 +321,7 @@ export default function ScanForm() {
                     onSelect={setTransactionDate}
                     initialFocus
                     locale={es}
-                    disabled={(date) => clientNow ? date > clientNow : false} // Prevent selecting future dates
+                    disabled={(date) => clientNow ? date > clientNow : false} 
                   />
                 </PopoverContent>
               </Popover>
@@ -370,17 +402,43 @@ export default function ScanForm() {
           {medicinesInPrescription.length > 0 && (
             <div className="mt-6 space-y-3">
               <h3 className="text-md font-semibold text-foreground">Medicamentos en esta Receta (Nº {prescriptionNumber}):</h3>
-              <ul className="list-disc pl-5 space-y-1 text-sm bg-background p-3 rounded-md border max-h-48 overflow-y-auto">
+              <ul className="space-y-2 bg-background p-3 rounded-md border max-h-60 overflow-y-auto">
                 {medicinesInPrescription.map((med) => (
-                  <li key={med.id}>
-                    {med.details} - Cantidad: {med.quantity} (Fecha: {format(parseISO(med.transactionDate), "dd/MM/yy", {locale: es})})
+                  <li key={med.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border-b last:border-b-0 hover:bg-muted/50 rounded-md gap-2">
+                    <div className="flex-grow">
+                      <p className="text-sm font-medium">{med.details}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Fecha: {format(parseISO(med.transactionDate), "dd/MM/yy", { locale: es })}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <Label htmlFor={`quantity-${med.id}`} className="sr-only">Cantidad para {med.details}</Label>
+                      <Input
+                        id={`quantity-${med.id}`}
+                        type="number"
+                        value={med.quantity}
+                        onChange={(e) => handleUpdateMedicineQuantity(med.id, e.target.value)}
+                        className="w-20 h-9 text-sm p-1"
+                        min="1"
+                        aria-label={`Cantidad para ${med.details}`}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-destructive hover:text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => handleRemoveMedicineFromPrescription(med.id)}
+                        aria-label={`Eliminar ${med.details} de la receta`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
             </div>
           )}
           
-          <Button type="button" onClick={handleFinalizePrescription} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3 mt-6">
+          <Button type="button" onClick={handleFinalizePrescription} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3 mt-6" disabled={medicinesInPrescription.length === 0}>
             <CheckCircle className="mr-2 h-5 w-5" />
             Finalizar Receta
           </Button>
@@ -425,3 +483,4 @@ export default function ScanForm() {
   return null; 
 }
 
+    
