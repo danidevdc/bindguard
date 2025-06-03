@@ -6,7 +6,7 @@ from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea'; // Replaced with Input
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,9 +50,18 @@ export default function ScanForm() {
   // const qrScannerRef = useRef<QrScanner | null>(null);
 
   useEffect(() => {
-    setClientNow(new Date());
-    setTransactionDate(new Date()); // Default to current date
+    const today = new Date();
+    setClientNow(today);
+    setTransactionDate(today); // Default to current date when component mounts or step changes
   }, []);
+  
+  useEffect(() => {
+    // Also reset transaction date when returning to this step or initializing
+    if (step === "addMedicines") {
+      setTransactionDate(clientNow || new Date());
+    }
+  }, [step, clientNow]);
+
 
   // Camera permission logic for QR scanning
   useEffect(() => {
@@ -98,6 +107,7 @@ export default function ScanForm() {
       return;
     }
     setStep("addMedicines");
+    setTransactionDate(clientNow || new Date()); // Ensure date is reset for new prescription
     toast({ title: "Receta Iniciada", description: `Procesando receta Nº: ${prescriptionNumber}` });
   };
 
@@ -323,12 +333,13 @@ export default function ScanForm() {
                   </div>
               )}
 
-              <Textarea
-                placeholder="O ingresa aquí los detalles del medicamento (Nombre, Dosis, Lote)"
+              <Input
+                type="text"
+                placeholder="O ingresa aquí el código/detalles del medicamento"
                 value={currentMedicineDetails}
                 onChange={(e) => setCurrentMedicineDetails(e.target.value)}
                 required
-                className="mt-2 min-h-[60px]"
+                className="mt-2"
                 disabled={isScanningQR}
               />
             </div>

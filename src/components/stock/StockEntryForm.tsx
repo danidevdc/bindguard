@@ -5,7 +5,7 @@ import { useState, useEffect, type FormEvent, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea'; // Replaced with Input
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -243,13 +243,14 @@ export default function StockEntryForm() {
                     <p className="text-sm text-green-600">{medicineDetails}</p>
                 </div>
             )}
-            <Textarea
+            <Input
+              type="text"
               id="medicineDetailsStock"
-              placeholder="O ingresa aquí los detalles (Nombre, Dosis, Lote)"
+              placeholder="O ingresa aquí el código/detalles del medicamento"
               value={medicineDetails}
               onChange={(e) => setMedicineDetails(e.target.value)}
               required
-              className="mt-2 min-h-[60px]"
+              className="mt-2"
               disabled={isScanningQR}
             />
           </div>
@@ -310,3 +311,4 @@ export default function StockEntryForm() {
     </Card>
   );
 }
+
