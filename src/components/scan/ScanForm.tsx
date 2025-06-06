@@ -61,10 +61,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   useEffect(() => {
     const today = new Date();
     setClientNow(today);
-    if (!recipeDate && step === "identifyMedicine") { 
+    if (!recipeDate && step === "identifyMedicine") {
       setRecipeDate(today);
     }
-  }, [step, recipeDate]); 
+  }, [step, recipeDate]);
 
   useEffect(() => {
     if (isScanningQR) {
@@ -99,7 +99,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   useImperativeHandle(ref, () => ({
     navigateBackStep: () => {
       if (isScanningQR) {
-        setIsScanningQR(false); 
+        setIsScanningQR(false);
         return true;
       }
       if (step === "reviewPrescription") {
@@ -114,7 +114,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setStep("enterPrescriptionNumber");
         return true;
       }
-      return false; 
+      return false;
     }
   }));
 
@@ -137,20 +137,20 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       toast({title: "Datos Incompletos", description: "Se requiere código de medicamento y fecha de receta.", variant: "destructive"});
       return;
     }
-    setIdentifiedMedicineName(`Medicamento ${currentScannedCode.toUpperCase()}`); 
-    setIdentifiedMedicineCode(currentScannedCode); 
+    setIdentifiedMedicineName(`Medicamento ${currentScannedCode.toUpperCase()}`);
+    setIdentifiedMedicineCode(currentScannedCode);
     setStep("enterQuantity");
-    setIsScanningQR(false); 
+    setIsScanningQR(false);
   };
 
   const handleScanButtonClick = () => {
     setIsScanningQR(prev => !prev);
-    if(!isScanningQR) { 
+    if(!isScanningQR) {
         setCurrentScannedCode('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setHasCameraPermission(null);
-    } else { 
+    } else {
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
             stream.getTracks().forEach(track => track.stop());
@@ -158,7 +158,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         }
     }
   };
-  
+
   const handleSimulateScanForIdentification = () => {
     const simulatedQRData = `MED-QR-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     setCurrentScannedCode(simulatedQRData);
@@ -177,7 +177,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
 
     const newMedicineEntry: MedicineForPrescription = {
-      id: Date.now().toString(), 
+      id: Date.now().toString(),
       name: identifiedMedicineName,
       code: identifiedMedicineCode,
       quantity: quantityNum,
@@ -206,15 +206,15 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
       setCurrentQuantity('');
-      setStep("identifyMedicine"); 
+      setStep("identifyMedicine");
     }
   };
-  
+
   const handleGoToReviewFromQuantity = () => {
     let itemAddedSuccessfully = false;
     if (currentQuantity.trim() && identifiedMedicineCode && identifiedMedicineName) {
         itemAddedSuccessfully = addCurrentMedicineToList();
-        if (!itemAddedSuccessfully) return; 
+        if (!itemAddedSuccessfully) return;
     }
 
     if (itemAddedSuccessfully || medicinesInPrescription.length > 0) {
@@ -243,9 +243,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const handleUpdateMedicineQuantityInReview = (medicineId: string, newQuantityStr: string) => {
     if (newQuantityStr === "" || parseInt(newQuantityStr) <= 0) {
       setMedicinesInPrescription(prevMeds =>
-        prevMeds.map(med => med.id === medicineId ? { ...med, quantity: 0 } : med) 
+        prevMeds.map(med => med.id === medicineId ? { ...med, quantity: 0 } : med)
       );
-      if (newQuantityStr !== "") { 
+      if (newQuantityStr !== "") {
          toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número positivo mayor a 0.", variant: "destructive" });
       }
       return;
@@ -282,17 +282,17 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     } else {
         toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} ha sido cancelada.`, variant: "default" });
     }
-    
+
     setPrescriptionNumber('');
-    setRecipeDate(clientNow || new Date()); 
+    setRecipeDate(clientNow || new Date());
     setCurrentScannedCode('');
     setIdentifiedMedicineName('');
     setIdentifiedMedicineCode('');
     setCurrentQuantity('');
     setMedicinesInPrescription([]);
-    setIsScanningQR(false); 
+    setIsScanningQR(false);
     setHasCameraPermission(null);
-    router.push('/dashboard'); 
+    router.push('/dashboard');
   };
 
 
@@ -312,7 +312,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               <Input
                 id="prescriptionNumberInput"
                 type="text"
-                inputMode="numeric" 
+                inputMode="numeric"
                 placeholder="Nº"
                 value={prescriptionNumber}
                 onChange={(e) => setPrescriptionNumber(e.target.value.replace(/\D/g, ''))}
@@ -397,18 +397,18 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               </CardFooter>
             </Card>
           )}
-          
+
           <div className="space-y-2 mt-4">
               <Label htmlFor="recipeDate" className="text-accent">Fecha de la Receta</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button id="recipeDate" variant={"outline"}
                     className={cn(
-                        "w-full justify-start text-left font-normal", 
+                        "w-full justify-start text-left font-normal",
                         !recipeDate && "text-muted-foreground",
-                        recipeDate && "text-accent border-accent/70 hover:border-accent hover:bg-accent/5 focus:ring-accent"
+                        recipeDate && "bg-accent text-accent-foreground hover:bg-accent/90 focus:ring-accent"
                     )}>
-                    <CalendarIcon className={cn("mr-2 h-4 w-4", recipeDate && "text-accent")} />
+                    <CalendarIcon className={cn("mr-2 h-4 w-4", recipeDate && "text-accent-foreground")} />
                     {recipeDate ? format(recipeDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
                   </Button>
                 </PopoverTrigger>
@@ -418,10 +418,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               </Popover>
           </div>
            {medicinesInPrescription.length > 0 && (
-            <Button 
-              type="button" 
-              variant="default" 
-              onClick={handleGoToReviewFromIdentify} 
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleGoToReviewFromIdentify}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3 mt-4"
             >
               <ClipboardList className="mr-2 h-5 w-5" />
@@ -444,9 +444,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           <div className="space-y-2">
             <Label htmlFor="quantityInput" className="text-lg">Cantidad a Dispensar</Label>
             <Input id="quantityInput" type="number" inputMode="numeric" placeholder="0"
-              value={currentQuantity} 
+              value={currentQuantity}
               onChange={(e) => setCurrentQuantity(e.target.value.replace(/\D/g, ''))}
-              required 
+              required
               className="text-4xl h-20 p-4 text-center"
               min="1"
             />
@@ -456,10 +456,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               <PlusCircle className="mr-2 h-5 w-5" />
               Agregar a Receta
             </Button>
-            <Button 
-                onClick={handleGoToReviewFromQuantity} 
+            <Button
+                onClick={handleGoToReviewFromQuantity}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3"
-                disabled={medicinesInPrescription.length === 0 && !currentQuantity.trim()}
+                disabled={medicinesInPrescription.length === 0 && (!currentQuantity.trim() || parseInt(currentQuantity) <= 0)}
             >
               <ClipboardList className="mr-2 h-5 w-5" />
               Finalizar y Revisar Receta
@@ -496,7 +496,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                   <div className="flex items-center space-x-2 shrink-0 mt-2 sm:mt-0">
                     <Label htmlFor={`quantity-${med.id}`} className="sr-only">Cantidad para {med.name}</Label>
                     <Input id={`quantity-${med.id}`} type="number" inputMode="numeric"
-                      value={med.quantity <= 0 ? '' : med.quantity.toString()} 
+                      value={med.quantity <= 0 ? '' : med.quantity.toString()}
                       onChange={(e) => handleUpdateMedicineQuantityInReview(med.id, e.target.value.replace(/\D/g, ''))}
                       className="w-20 h-9 text-sm p-1" min="1"
                       aria-label={`Cantidad para ${med.name}`}
