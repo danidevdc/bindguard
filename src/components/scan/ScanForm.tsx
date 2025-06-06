@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, type FormEvent, useRef }
+import { useState, useEffect, type FormEvent, useRef, forwardRef, useImperativeHandle }
 from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 interface MedicineForPrescription {
-  id: string; 
-  name: string; 
-  code: string; 
+  id: string;
+  name: string;
+  code: string;
   quantity: number;
 }
 
@@ -31,7 +31,11 @@ type ScanStep =
   "enterQuantity" |
   "reviewPrescription";
 
-export default function ScanForm() {
+export interface ScanFormRef {
+  navigateBackStep: () => boolean;
+}
+
+const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [step, setStep] = useState<ScanStep>("enterPrescriptionNumber");
   const router = useRouter();
 
@@ -39,8 +43,8 @@ export default function ScanForm() {
   const [recipeDate, setRecipeDate] = useState<Date | undefined>(undefined);
 
   const [currentScannedCode, setCurrentScannedCode] = useState('');
-  const [identifiedMedicineName, setIdentifiedMedicineName] = useState('');
-  const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState('');
+  const [identifiedMedicineName, setIdentifiedMedicineName] = useState(''); // Nombre del medicamento identificado
+  const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState(''); // Código del medicamento identificado
 
   const [currentQuantity, setCurrentQuantity] = useState('');
   const [medicinesInPrescription, setMedicinesInPrescription] = useState<MedicineForPrescription[]>([]);
@@ -57,10 +61,10 @@ export default function ScanForm() {
   useEffect(() => {
     const today = new Date();
     setClientNow(today);
-    if (!recipeDate) {
+    if (!recipeDate && step !== "enterPrescriptionNumber") { // Set recipeDate only when moving past first step
       setRecipeDate(today);
     }
-  }, []);
+  }, [step]);
 
   useEffect(() => {
     if (isScanningQR) {
@@ -92,6 +96,35 @@ export default function ScanForm() {
     }
   }, [isScanningQR, toast]);
 
+  useImperativeHandle(ref, () => ({
+    navigateBackStep: () => {
+      if (step === "identifyMedicine") {
+        setStep("enterPrescriptionNumber");
+        setCurrentScannedCode('');
+        setIdentifiedMedicineName('');
+        setIdentifiedMedicineCode('');
+        // recipeDate se mantiene o se resetea según lógica del primer paso
+        return true;
+      }
+      if (step === "enterQuantity") {
+        setStep("identifyMedicine");
+        setCurrentQuantity('');
+        // Los detalles del medicamento identificado (currentScannedCode, etc.) se mantienen
+        // para que "identifyMedicine" los muestre y el usuario no tenga que volver a escanear/ingresar.
+        return true;
+      }
+      if (step === "reviewPrescription") {
+        setStep("identifyMedicine"); // Volver a identificar para añadir más o corregir
+        setCurrentScannedCode('');
+        setIdentifiedMedicineName('');
+        setIdentifiedMedicineCode('');
+        setCurrentQuantity('');
+        return true;
+      }
+      return false; // No hay paso anterior interno
+    }
+  }));
+
 
   const handleStartPrescription = (event: FormEvent) => {
     event.preventDefault();
@@ -103,36 +136,46 @@ export default function ScanForm() {
       });
       return;
     }
-    if(!recipeDate){ // Ensure recipeDate is set if not already
+    if(!recipeDate){
         setRecipeDate(clientNow || new Date());
     }
     setStep("identifyMedicine");
   };
 
+  // Se llamará cuando se escanea/ingresa un código y hay fecha
   const handleProceedToQuantity = () => {
     if (!currentScannedCode.trim() || !recipeDate) {
       toast({title: "Datos Incompletos", description: "Se requiere código de medicamento y fecha de receta.", variant: "destructive"});
       return;
     }
-    // Simulate identification based on code
-    setIdentifiedMedicineName(`Medicamento ${currentScannedCode.toUpperCase()}`);
-    setIdentifiedMedicineCode(currentScannedCode);
+    // Simulación de identificación
+    setIdentifiedMedicineName(`Medicamento ${currentScannedCode.toUpperCase()}`); // Nombre simulado
+    setIdentifiedMedicineCode(currentScannedCode); // Código
     setStep("enterQuantity");
-    setIsScanningQR(false); // Close camera if it was open
+    setIsScanningQR(false);
   };
 
   const handleScanButtonClick = () => {
     setIsScanningQR(prev => !prev);
-    if(!isScanningQR) { // If turning on camera
-        setCurrentScannedCode(''); // Clear manual code
-        setHasCameraPermission(null); // Reset permission status to re-check
+    if(!isScanningQR) {
+        setCurrentScannedCode('');
+        setIdentifiedMedicineName('');
+        setIdentifiedMedicineCode('');
+        setHasCameraPermission(null);
+    } else {
+        // Si se cierra la cámara, detener el stream
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+        }
     }
   };
 
   const handleSimulateScanForIdentification = () => {
     const simulatedQRData = `MED-QR-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     setCurrentScannedCode(simulatedQRData);
-    setIsScanningQR(false); // Close camera after simulation
+    // No cerramos la cámara aquí, el usuario puede querer reintentar
     toast({ title: "QR Simulado", description: `Código: ${simulatedQRData}`});
   };
 
@@ -148,22 +191,21 @@ export default function ScanForm() {
     }
 
     const newMedicineEntry: MedicineForPrescription = {
-      id: Date.now().toString(), // Unique ID for the list item
+      id: Date.now().toString(),
       name: identifiedMedicineName,
       code: identifiedMedicineCode,
       quantity: quantityNum,
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
-    // Simulate actual inventory update log (this would be an API call in a real app)
     console.log('Simulating inventory update (dispensing):', {
         date: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
         prescriptionNumber: prescriptionNumber,
         quantity: quantityNum,
         medicineName: identifiedMedicineName,
         medicineCode: identifiedMedicineCode,
-        mode: 'dispensing', // or 'stocking'
-        userName: getCurrentUserUsername() || 'System', // Assuming you have a way to get current user
+        mode: 'dispensing',
+        userName: getCurrentUserUsername() || 'System',
     });
     toast({
       title: "Medicamento Añadido a Receta",
@@ -172,32 +214,24 @@ export default function ScanForm() {
     return true;
   };
 
-
   const handleAddMedicineAndContinueScanning = () => {
     if (addCurrentMedicineToList()) {
-      // Reset for next medicine
       setCurrentScannedCode('');
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
       setCurrentQuantity('');
-      setStep("identifyMedicine"); // Go back to identify next medicine
+      setStep("identifyMedicine");
     }
   };
 
   const handleGoToReviewFromQuantity = () => {
     let itemAddedSuccessfully = false;
-    // Try to add current item if quantity is entered
-    if (currentQuantity.trim() && identifiedMedicineCode) {
+    if (currentQuantity.trim() && identifiedMedicineCode && identifiedMedicineName) {
         itemAddedSuccessfully = addCurrentMedicineToList();
-        if (!itemAddedSuccessfully) {
-            // If adding fails (e.g. invalid quantity), don't proceed
-            return;
-        }
+        if (!itemAddedSuccessfully) return;
     }
 
-    // Proceed to review if item was added OR if there are already items in prescription
     if (itemAddedSuccessfully || medicinesInPrescription.length > 0) {
-        // Reset for next potential add or if user comes back
         setCurrentScannedCode('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
@@ -210,18 +244,16 @@ export default function ScanForm() {
 
   const handleUpdateMedicineQuantityInReview = (medicineId: string, newQuantityStr: string) => {
     if (newQuantityStr === "" || parseInt(newQuantityStr) <= 0) {
-      // Temporarily set to 0 or invalid state, toast will show if it's not empty string
       setMedicinesInPrescription(prevMeds =>
         prevMeds.map(med => med.id === medicineId ? { ...med, quantity: 0 } : med)
       );
-      if (newQuantityStr !== "") { // Avoid toast if user just cleared the field
+      if (newQuantityStr !== "") {
          toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número positivo mayor a 0.", variant: "destructive" });
       }
       return;
     }
     const newQuantity = parseInt(newQuantityStr);
      if (isNaN(newQuantity)) {
-        // This case might not be hit due to input type="number", but good for safety
         toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número.", variant: "destructive" });
         return;
     }
@@ -237,17 +269,15 @@ export default function ScanForm() {
 
   const finalizeAndRedirect = (action: "confirmed" | "cancelled") => {
     if (action === "confirmed") {
-        // Check if any medicine has an invalid quantity (0 or less) before confirming
         if (medicinesInPrescription.some(med => med.quantity <= 0)) {
             toast({ title: "Cantidades Inválidas", description: "Asegúrate que todos los medicamentos tengan una cantidad válida (mayor a 0).", variant: "destructive" });
             return;
         }
-        // Simulate saving the prescription
         console.log("Prescription Confirmed:", {
             prescriptionNumber,
             recipeDate: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
             items: medicinesInPrescription,
-            dispensedBy: getCurrentUserUsername() || 'System', // Assuming useAuth provides this
+            dispensedBy: getCurrentUserUsername() || 'System',
             finalizedAt: new Date().toISOString(),
         });
         toast({ title: "Receta Confirmada", description: `Receta Nº ${prescriptionNumber} procesada.`, variant: "default" });
@@ -255,20 +285,16 @@ export default function ScanForm() {
         toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} ha sido cancelada.`, variant: "default" });
     }
 
-    // Reset all states for a new prescription
     setPrescriptionNumber('');
-    setRecipeDate(clientNow || new Date()); // Reset to today or initial clientNow
+    setRecipeDate(clientNow || new Date());
     setCurrentScannedCode('');
     setIdentifiedMedicineName('');
     setIdentifiedMedicineCode('');
     setCurrentQuantity('');
     setMedicinesInPrescription([]);
-    // setStep("enterPrescriptionNumber"); // Reset to first step
-    router.push('/dashboard'); // Redirect to dashboard
+    router.push('/dashboard');
   };
 
-
-  // Step 0: Enter Prescription Number
   if (step === "enterPrescriptionNumber") {
     return (
       <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -298,7 +324,6 @@ export default function ScanForm() {
     );
   }
 
-  // Step 1 & 2 combined: Identify Medicine and Confirm
   if (step === "identifyMedicine") {
     return (
       <Card className="w-full max-w-lg mx-auto shadow-xl">
@@ -367,7 +392,7 @@ export default function ScanForm() {
             </Card>
           )}
           
-          <div className="space-y-2">
+          <div className="space-y-2 mt-4"> {/* Added mt-4 for spacing */}
               <Label htmlFor="recipeDate">Fecha de la Receta</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -387,8 +412,6 @@ export default function ScanForm() {
     );
   }
 
-
-  // Step 3: Enter Quantity
   if (step === "enterQuantity") {
     return (
       <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -407,7 +430,7 @@ export default function ScanForm() {
           <div className="space-y-3">
             <Button onClick={handleAddMedicineAndContinueScanning} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-md py-3">
               <PlusCircle className="mr-2 h-5 w-5" />
-              Agregar a Receta (y escanear otro)
+              Agregar a Receta
             </Button>
             <Button onClick={handleGoToReviewFromQuantity} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3">
               <ClipboardList className="mr-2 h-5 w-5" />
@@ -419,7 +442,6 @@ export default function ScanForm() {
     );
   }
 
-  // Step 4: Review Prescription
   if (step === "reviewPrescription") {
     return (
       <Card className="w-full max-w-xl mx-auto shadow-xl">
@@ -446,9 +468,9 @@ export default function ScanForm() {
                   <div className="flex items-center space-x-2 shrink-0 mt-2 sm:mt-0">
                     <Label htmlFor={`quantity-${med.id}`} className="sr-only">Cantidad para {med.name}</Label>
                     <Input id={`quantity-${med.id}`} type="number" inputMode="numeric"
-                      value={med.quantity <= 0 ? '' : med.quantity} // Show empty if quantity is 0 or less (invalid state before correction)
+                      value={med.quantity <= 0 ? '' : med.quantity}
                       onChange={(e) => handleUpdateMedicineQuantityInReview(med.id, e.target.value)}
-                      className="w-20 h-9 text-sm p-1" min="1" // Min attribute for browser validation hint
+                      className="w-20 h-9 text-sm p-1" min="1"
                       aria-label={`Cantidad para ${med.name}`}
                     />
                     <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive-foreground hover:bg-destructive/90"
@@ -483,6 +505,10 @@ export default function ScanForm() {
     );
   }
 
-  return null; // Should not happen if steps are managed correctly
-}
+  return null;
+});
 
+ScanForm.displayName = 'ScanForm';
+export default ScanForm;
+
+    
