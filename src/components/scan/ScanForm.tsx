@@ -70,20 +70,30 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (isScanningQR) {
       const getCameraPermission = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
           setHasCameraPermission(true);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
         } catch (error) {
           console.error('Error accessing camera:', error);
-          setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Acceso a Cámara Denegado',
-            description: 'Por favor, habilita los permisos de cámara en tu navegador para escanear.',
-          });
-          setIsScanningQR(false);
+          // Fallback to any camera if environment facingMode fails
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            setHasCameraPermission(true);
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+            }
+          } catch (fallbackError) {
+             console.error('Error accessing any camera:', fallbackError);
+            setHasCameraPermission(false);
+            toast({
+              variant: 'destructive',
+              title: 'Acceso a Cámara Denegado',
+              description: 'Por favor, habilita los permisos de cámara en tu navegador para escanear.',
+            });
+            setIsScanningQR(false);
+          }
         }
       };
       getCameraPermission();
@@ -140,17 +150,17 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setIdentifiedMedicineName(`Medicamento ${currentScannedCode.toUpperCase()}`);
     setIdentifiedMedicineCode(currentScannedCode);
     setStep("enterQuantity");
-    setIsScanningQR(false);
+    setIsScanningQR(false); 
   };
 
   const handleScanButtonClick = () => {
     setIsScanningQR(prev => !prev);
-    if(!isScanningQR) {
+    if(!isScanningQR) { // If turning on camera
         setCurrentScannedCode('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setHasCameraPermission(null);
-    } else {
+    } else { // If turning off camera
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
             stream.getTracks().forEach(track => track.stop());
@@ -163,6 +173,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     const simulatedQRData = `MED-QR-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     setCurrentScannedCode(simulatedQRData);
     toast({ title: "QR Simulado", description: `Código: ${simulatedQRData}`});
+    setIsScanningQR(false); // Close camera after simulated scan
   };
 
   const addCurrentMedicineToList = (): boolean => {
@@ -214,8 +225,15 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     let itemAddedSuccessfully = false;
     if (currentQuantity.trim() && identifiedMedicineCode && identifiedMedicineName) {
         itemAddedSuccessfully = addCurrentMedicineToList();
-        if (!itemAddedSuccessfully) return;
+        if (!itemAddedSuccessfully) return; 
+    } else if (!currentQuantity.trim() && identifiedMedicineCode && identifiedMedicineName && medicinesInPrescription.length > 0) {
+        // If going to review from quantity but current quantity field is empty, but there are items
+        // just proceed to review without adding the "empty" current item.
+    } else if (medicinesInPrescription.length === 0 && (!currentQuantity.trim() || parseInt(currentQuantity) <= 0)) {
+        toast({ title: "Receta Vacía", description: "Añade al menos un medicamento o ingresa una cantidad válida para el actual.", variant: "destructive" });
+        return;
     }
+
 
     if (itemAddedSuccessfully || medicinesInPrescription.length > 0) {
         setCurrentScannedCode('');
