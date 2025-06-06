@@ -94,7 +94,7 @@ export default function RegistrationForm() {
               type="text"
               value={generatedUsername}
               readOnly
-              className="bg-muted/50 border-dashed"
+              className="bg-muted/50 border-dashed cursor-default focus:ring-0 focus:outline-none pointer-events-none"
               placeholder="nombre.apellido"
             />
           </div>

@@ -38,7 +38,6 @@ export default function DashboardClient() {
           <Link href="/scan" passHref legacyBehavior>
             <Button
               variant="default"
-              size="lg" 
               className="w-full h-40 text-xl bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Escanear Medicamento"
             >
@@ -49,7 +48,6 @@ export default function DashboardClient() {
           <Link href="/inventory" passHref legacyBehavior>
             <Button
               variant="default"
-              size="lg"
               className="w-full h-40 text-xl bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Ver Inventario"
             >
