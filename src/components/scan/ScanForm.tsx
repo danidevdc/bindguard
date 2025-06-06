@@ -61,10 +61,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   useEffect(() => {
     const today = new Date();
     setClientNow(today);
-    if (!recipeDate && step === "identifyMedicine") { // Set initial recipe date only when entering identifyMedicine
+    if (!recipeDate && step === "identifyMedicine") { 
       setRecipeDate(today);
     }
-  }, [step, recipeDate]); // recipeDate dependency ensures it's not reset if already set
+  }, [step, recipeDate]); 
 
   useEffect(() => {
     if (isScanningQR) {
@@ -104,27 +104,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       }
       if (step === "reviewPrescription") {
         setStep("identifyMedicine");
-        // Clear current scan/quantity fields but keep prescription list
-        setCurrentScannedCode('');
-        setIdentifiedMedicineName('');
-        setIdentifiedMedicineCode('');
-        setCurrentQuantity('');
         return true;
       }
       if (step === "enterQuantity") {
         setStep("identifyMedicine");
-        // Keep currentScannedCode, identifiedMedicineName, identifiedMedicineCode
-        // User might want to change date or re-verify, but not re-scan
-        setCurrentQuantity('');
         return true;
       }
       if (step === "identifyMedicine") {
         setStep("enterPrescriptionNumber");
-        // Clear all identification related state
-        setCurrentScannedCode('');
-        setIdentifiedMedicineName('');
-        setIdentifiedMedicineCode('');
-        // setRecipeDate(undefined); // Let useEffect handle setting default recipeDate
         return true;
       }
       return false; 
@@ -142,7 +129,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       });
       return;
     }
-    // recipeDate is now set when entering identifyMedicine step via useEffect
     setStep("identifyMedicine");
   };
 
@@ -495,7 +481,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md border">
-            <p>Número de Receta: <strong className="text-foreground">{prescriptionNumber}</strong></p>
+            <p>Nº de Receta: <strong className="text-foreground">{prescriptionNumber}</strong></p>
             <p>Fecha: <strong className="text-foreground">{recipeDate ? format(recipeDate, "dd/MM/yyyy", { locale: es }) : 'N/A'}</strong></p>
           </div>
 
@@ -535,7 +521,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               disabled={medicinesInPrescription.length === 0 || medicinesInPrescription.some(m => m.quantity <= 0)}
             >
               <CheckSquare className="mr-2 h-5 w-5" />
-              Confirmar Receta
+              Confirmar
             </Button>
             <Button
               onClick={() => finalizeAndRedirect("cancelled")}
@@ -543,7 +529,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               className="w-full text-md py-3"
             >
               <XCircle className="mr-2 h-5 w-5" />
-              Cancelar Receta
+              Cancelar
             </Button>
           </div>
         </CardContent>
@@ -556,3 +542,4 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
+
