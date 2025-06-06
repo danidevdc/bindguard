@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -9,7 +10,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000000 // Internal cleanup delay, not visual
 
 type ToasterToast = ToastProps & {
   id: string
@@ -158,6 +159,7 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
+      duration: 2000, // Set default visual duration to 2 seconds
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
