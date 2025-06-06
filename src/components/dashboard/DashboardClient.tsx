@@ -29,7 +29,7 @@ export default function DashboardClient() {
     <div className="flex flex-col items-center justify-center">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-3xl font-semibold">
+          <CardTitle className="text-2xl font-semibold">
             {displayName ? `Hola, ${displayName}` : 'Bienvenido'}
           </CardTitle>
           {/* Description removed as per request */}
@@ -42,7 +42,7 @@ export default function DashboardClient() {
               className="w-full h-40 text-xl bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Escanear Medicamento"
             >
-              <QrCode className="h-12 w-12 mb-3" />
+              <QrCode className="h-16 w-16 mb-3" />
               Escanear Medicamento
             </Button>
           </Link>
@@ -53,7 +53,7 @@ export default function DashboardClient() {
               className="w-full h-40 text-xl bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Ver Inventario"
             >
-              <LayoutList className="h-12 w-12 mb-3" />
+              <LayoutList className="h-16 w-16 mb-3" />
               Inventario
             </Button>
           </Link>

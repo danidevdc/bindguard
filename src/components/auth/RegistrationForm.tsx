@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,23 @@ import { useToast } from '@/hooks/use-toast';
 export default function RegistrationForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [generatedUsername, setGeneratedUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { register, isLoading } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const generateUsername = () => {
+      if (firstName.trim() && lastName.trim()) {
+        const username = `${firstName.trim().toLowerCase()}.${lastName.trim().toLowerCase()}`;
+        setGeneratedUsername(username);
+      } else {
+        setGeneratedUsername('');
+      }
+    };
+    generateUsername();
+  }, [firstName, lastName]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -37,7 +50,7 @@ export default function RegistrationForm() {
       });
       return;
     }
-    // Username will be generated as nombre.apellido in useAuth
+    // Username is generated (firstName.lastName) and passed from useAuth
     await register(firstName, lastName, password);
     // Toast for success/failure is handled within useAuth's register
   };
@@ -72,6 +85,17 @@ export default function RegistrationForm() {
               onChange={(e) => setLastName(e.target.value)}
               required
               className="bg-background"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="usernameDisplay">Usuario (generado)</Label>
+            <Input
+              id="usernameDisplay"
+              type="text"
+              value={generatedUsername}
+              readOnly
+              className="bg-muted/50 border-dashed"
+              placeholder="nombre.apellido"
             />
           </div>
           <div className="space-y-2">
