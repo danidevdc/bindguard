@@ -443,7 +443,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3 mt-4"
             >
               <ClipboardList className="mr-2 h-5 w-5" />
-              Finalizar y Revisar Receta ({medicinesInPrescription.length} items)
+              Revisar Receta ({medicinesInPrescription.length} items)
             </Button>
           )}
         </CardContent>
@@ -480,7 +480,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                 disabled={medicinesInPrescription.length === 0 && (!currentQuantity.trim() || parseInt(currentQuantity) <= 0)}
             >
               <ClipboardList className="mr-2 h-5 w-5" />
-              Finalizar y Revisar Receta
+              Revisar Receta
             </Button>
           </div>
         </CardContent>
