@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // CardDescription removed where needed
 import { Camera, FileText, Package, CheckCircle, AlertTriangle, ListPlus, Pill, ShoppingCart, CheckSquare, CalendarIcon, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -38,7 +38,7 @@ export default function ScanForm() {
 
 
   const { toast } = useToast();
-  const { getCurrentUser } = useAuth();
+  const { getCurrentUserUsername } = useAuth(); // Renamed from getCurrentUser
 
   const [isScanningQR, setIsScanningQR] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -99,7 +99,7 @@ export default function ScanForm() {
       return;
     }
     setStep("addMedicines");
-    if (!transactionDate) { // Ensure date is set if not already
+    if (!transactionDate) { 
       setTransactionDate(clientNow || new Date());
     }
     toast({ title: "Receta Iniciada", description: `Procesando receta Nº: ${prescriptionNumber}` });
@@ -140,14 +140,14 @@ export default function ScanForm() {
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
-    const currentUser = getCurrentUser();
+    const currentUserUsername = getCurrentUserUsername();
     console.log('Simulating inventory update (dispensing):', {
       date: transactionDate.toISOString().split('T')[0],
       prescriptionNumber: prescriptionNumber, 
       quantity: quantityNum,
       medicineDetails: currentMedicineDetails,
       mode: 'dispensing', 
-      userName: currentUser || 'System',
+      userName: currentUserUsername || 'System',
     });
     toast({
       title: "Medicamento Añadido",
@@ -161,7 +161,6 @@ export default function ScanForm() {
 
   const handleUpdateMedicineQuantity = (medicineId: string, newQuantityStr: string) => {
     if (newQuantityStr === "") {
-      // User cleared the input. Snap back to the current valid quantity.
       setMedicinesInPrescription(prevMeds => [...prevMeds]);
       return;
     }
@@ -174,7 +173,7 @@ export default function ScanForm() {
         description: "La cantidad debe ser un número positivo.",
         variant: "destructive",
       });
-      setMedicinesInPrescription(prevMeds => [...prevMeds]); // Snap back to current valid state
+      setMedicinesInPrescription(prevMeds => [...prevMeds]); 
       return;
     }
 
@@ -183,8 +182,6 @@ export default function ScanForm() {
         med.id === medicineId ? { ...med, quantity: newQuantity } : med
       )
     );
-    // Success toast for quantity update can be noisy, so it's omitted here.
-    // User sees the change directly in the input.
   };
 
   const handleRemoveMedicineFromPrescription = (medicineId: string) => {
@@ -209,7 +206,7 @@ export default function ScanForm() {
     console.log("Prescription Finalized:", {
       prescriptionNumber,
       items: medicinesInPrescription,
-      dispensedBy: getCurrentUser() || 'System',
+      dispensedBy: getCurrentUserUsername() || 'System',
       dispensedAt: new Date().toISOString(),
     });
 
@@ -252,11 +249,9 @@ export default function ScanForm() {
         <CardHeader>
           <CardTitle className="text-xl text-center flex items-center justify-center">
             <FileText className="mr-2 h-6 w-6 text-primary" />
-            Ingresar Número de Receta
+            Nº de Receta
           </CardTitle>
-          <CardDescription className="text-center">
-            Ingresa el número de la receta manual o impresa para comenzar.
-          </CardDescription>
+          {/* CardDescription removed */}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleStartPrescription} className="space-y-6">
@@ -265,7 +260,7 @@ export default function ScanForm() {
               <Input
                 id="prescriptionNumberInput"
                 type="text"
-                placeholder="Ej: 394192 o 2215946"
+                placeholder="Nº"
                 value={prescriptionNumber}
                 onChange={(e) => setPrescriptionNumber(e.target.value)}
                 required
@@ -288,11 +283,9 @@ export default function ScanForm() {
         <CardHeader>
           <CardTitle className="text-xl text-center flex items-center justify-center">
              <Pill className="mr-2 h-6 w-6 text-primary" />
-            Añadir Medicamentos a Receta Nº {prescriptionNumber}
+            Receta Nº {prescriptionNumber}
           </CardTitle>
-          <CardDescription className="text-center">
-            Escanea el QR de cada medicamento e ingresa la cantidad a dispensar.
-          </CardDescription>
+           {/* CardDescription removed */}
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="p-4 border rounded-md bg-muted/20 space-y-4">
@@ -416,6 +409,7 @@ export default function ScanForm() {
                       <Input
                         id={`quantity-${med.id}`}
                         type="number"
+                        inputMode="numeric"
                         value={med.quantity}
                         onChange={(e) => handleUpdateMedicineQuantity(med.id, e.target.value)}
                         className="w-20 h-9 text-sm p-1"
@@ -482,5 +476,3 @@ export default function ScanForm() {
 
   return null; 
 }
-
-    

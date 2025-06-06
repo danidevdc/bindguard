@@ -4,7 +4,7 @@
 import AuthWrapper from '@/components/AuthWrapper';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // CardDescription removed
 import { ShoppingCart, PackagePlus, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -27,11 +27,9 @@ export default function ScanModeSelectionPage() {
         <Card className="w-full shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
-              Seleccionar Operación de Inventario
+              Seleccionar una opción
             </CardTitle>
-            <CardDescription>
-              Elige si deseas dispensar medicamentos de una receta o añadir nuevo stock al inventario.
-            </CardDescription>
+            {/* CardDescription removed */}
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
             <Link href="/dispense" passHref legacyBehavior>

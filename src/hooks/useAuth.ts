@@ -1,30 +1,33 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
-const RXLOCAL_USERS_KEY = 'rxlocal_users'; // Stores array of {username, password}
-const RXLOCAL_CURRENT_USER_KEY = 'rxlocal_currentUser'; // Stores username of logged-in user
+const RXLOCAL_USERS_KEY = 'rxlocal_users_v2'; // Stores array of {username, password, firstName, lastName}
+const RXLOCAL_CURRENT_USER_KEY = 'rxlocal_currentUser_v2'; // Stores username (nombre.apellido) of logged-in user
 
-interface UserCredentials {
-  username: string;
-  password?: string; // Password stored for simplicity, hash in real app
+interface UserData {
+  username: string; // nombre.apellido
+  password?: string;
+  firstName: string;
+  lastName: string;
 }
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null); // Stores username: nombre.apellido
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     try {
-      const storedCurrentUser = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
-      if (storedCurrentUser) {
+      const storedCurrentUserUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
+      if (storedCurrentUserUsername) {
         setIsAuthenticated(true);
-        setCurrentUser(storedCurrentUser);
+        setCurrentUser(storedCurrentUserUsername);
       } else {
         setIsAuthenticated(false);
         setCurrentUser(null);
@@ -37,7 +40,7 @@ export function useAuth() {
     setIsLoading(false);
   }, []);
 
-  const getUsers = (): UserCredentials[] => {
+  const getUsers = (): UserData[] => {
     try {
       const usersJson = localStorage.getItem(RXLOCAL_USERS_KEY);
       return usersJson ? JSON.parse(usersJson) : [];
@@ -47,7 +50,7 @@ export function useAuth() {
     }
   };
 
-  const saveUsers = (users: UserCredentials[]) => {
+  const saveUsers = (users: UserData[]) => {
     try {
       localStorage.setItem(RXLOCAL_USERS_KEY, JSON.stringify(users));
     } catch (error) {
@@ -64,13 +67,14 @@ export function useAuth() {
     }
 
     const users = getUsers();
-    const user = users.find(u => u.username === username && u.password === password);
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
 
     if (user) {
       localStorage.setItem(RXLOCAL_CURRENT_USER_KEY, user.username);
       setIsAuthenticated(true);
       setCurrentUser(user.username);
-      toast({ title: "Inicio de Sesión Exitoso", description: `¡Bienvenido de nuevo, ${user.username}!` });
+      const capitalizedFirstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1).toLowerCase();
+      toast({ title: "Inicio de Sesión Exitoso", description: `¡Bienvenido de nuevo, ${capitalizedFirstName}!` });
       router.push('/dashboard');
     } else {
       toast({ title: "Error de Inicio de Sesión", description: "Credenciales incorrectas. Inténtalo de nuevo.", variant: "destructive" });
@@ -80,28 +84,34 @@ export function useAuth() {
     setIsLoading(false);
   }, [router, toast]);
 
-  const register = useCallback(async (username?: string, password?: string) => {
+  const register = useCallback(async (firstName?: string, lastName?: string, password?: string) => {
     setIsLoading(true);
-    if (!username || !password) {
-      toast({ title: "Error de Registro", description: "Usuario y contraseña son requeridos.", variant: "destructive" });
+    if (!firstName || !lastName || !password) {
+      toast({ title: "Error de Registro", description: "Nombre, apellido y contraseña son requeridos.", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
+    const generatedUsername = `${firstName.trim().toLowerCase()}.${lastName.trim().toLowerCase()}`;
     const users = getUsers();
-    if (users.find(u => u.username === username)) {
-      toast({ title: "Error de Registro", description: "Este nombre de usuario ya existe.", variant: "destructive" });
+
+    if (users.find(u => u.username.toLowerCase() === generatedUsername.toLowerCase())) {
+      toast({ title: "Error de Registro", description: "Este usuario (combinación nombre/apellido) ya existe.", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
-    const newUser: UserCredentials = { username, password };
+    const newUser: UserData = { 
+      username: generatedUsername, 
+      password,
+      firstName: firstName.trim(),
+      lastName: lastName.trim()
+    };
     saveUsers([...users, newUser]);
     
-    toast({ title: "Registro Exitoso", description: `Cuenta creada para ${username}. Ahora puedes iniciar sesión.` });
-    // Automatically log in the user after registration
-    await login(username, password);
-    // router.push('/login'); // Or redirect to dashboard if auto-login
+    const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
+    toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Ahora puedes iniciar sesión con el usuario: ${newUser.username}` });
+    await login(newUser.username, password); // Auto-login after registration
     setIsLoading(false);
   }, [toast, login]);
 
@@ -113,14 +123,23 @@ export function useAuth() {
     toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
   }, [router, toast]);
 
-  const getCurrentUser = useCallback(() => {
+  const getCurrentUserUsername = useCallback((): string | null => {
     try {
       return localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
     } catch (error) {
       return null;
     }
   }, []);
+  
+  // Helper function to get full user details, not used externally by components directly yet
+  // but useful for internal logic or future expansion.
+  const getCurrentUserDetails = useCallback((): UserData | null => {
+    const username = getCurrentUserUsername();
+    if (!username) return null;
+    const users = getUsers();
+    return users.find(u => u.username === username) || null;
+  }, [getCurrentUserUsername]);
 
 
-  return { isAuthenticated, isLoading, currentUser, login, register, logout, getCurrentUser };
+  return { isAuthenticated, isLoading, currentUser, login, register, logout, getCurrentUserUsername, getCurrentUserDetails };
 }

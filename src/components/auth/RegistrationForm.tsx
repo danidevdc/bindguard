@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type FormEvent } from 'react';
@@ -11,7 +12,8 @@ import { UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RegistrationForm() {
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { register, isLoading } = useAuth();
@@ -19,7 +21,7 @@ export default function RegistrationForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!username || !password || !confirmPassword) {
+    if (!firstName || !lastName || !password || !confirmPassword) {
       toast({
         title: "Error de Registro",
         description: "Por favor, completa todos los campos.",
@@ -35,7 +37,8 @@ export default function RegistrationForm() {
       });
       return;
     }
-    await register(username, password);
+    // Username will be generated as nombre.apellido in useAuth
+    await register(firstName, lastName, password);
     // Toast for success/failure is handled within useAuth's register
   };
 
@@ -48,13 +51,25 @@ export default function RegistrationForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="username">Nombre de Usuario</Label>
+            <Label htmlFor="firstName">Nombre</Label>
             <Input
-              id="username"
+              id="firstName"
               type="text"
-              placeholder="Elige un nombre de usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Ingresa tu nombre"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              className="bg-background"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Apellido</Label>
+            <Input
+              id="lastName"
+              type="text"
+              placeholder="Ingresa tu apellido"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               required
               className="bg-background"
             />
