@@ -187,8 +187,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
           <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
             <table className="w-full text-sm">
-              <thead className="bg-card sticky top-0 z-10">
-                <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
+              <thead className="sticky top-0 z-10">
+                <tr className="h-10 bg-card shadow-md">
                   <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Fecha</th>
                   <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">
                     Pedidos
@@ -208,7 +208,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     key={record.id}
                     className={cn(
                       "border-b border-border",
-                      clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
+                       clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
                       ? 'bg-red-100 dark:bg-red-900/30'
                       : ''
                     )}
@@ -260,3 +260,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
+
+    
