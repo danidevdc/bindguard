@@ -186,22 +186,22 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
           <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
-            <table className="w-full text-sm"> {/* Removed table-fixed */}
+            <table className="w-full text-sm">
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
-                  <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                  <th className="min-w-[105px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
-                    <span className="block md:hidden">Nº RECETA</span> {/* Removed <br/> */}
+                  <th className="min-w-[90px] px-1 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
+                  <th className="min-w-[105px] px-1 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
                     <span className="hidden md:inline">Nº RECETA</span>
+                    <span className="md:hidden">Nº RECETA</span>
                   </th>
-                  <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
-                  <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
-                  <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
-                  <th className="min-w-[95px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
-                     <span className="block md:hidden">Fecha Exp.</span> {/* Removed <br/> */}
+                  <th className="min-w-[70px] px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
+                  <th className="min-w-[70px] px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
+                  <th className="min-w-[70px] px-1 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
+                  <th className="min-w-[95px] px-1 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
                      <span className="hidden md:inline">Fecha Exp.</span>
+                     <span className="md:hidden">Fecha Exp.</span>
                   </th>
-                  <th className="pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap min-w-[100px]">Usuario</th>
+                  <th className="px-1 text-left align-middle font-medium text-muted-foreground whitespace-nowrap min-w-[100px]">Usuario</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-b-0">
@@ -215,16 +215,16 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       : ''
                     )}
                   >
-                    <td className="min-w-[90px] px-2 py-2 align-middle whitespace-nowrap text-xs">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                    <td className="min-w-[105px] px-2 py-2 align-middle whitespace-nowrap text-xs">{record.rxNumber}</td>
-                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs">
+                    <td className="min-w-[90px] px-1 py-2 align-middle whitespace-nowrap text-xs">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
+                    <td className="min-w-[105px] px-1 py-2 align-middle whitespace-nowrap text-xs">{record.rxNumber}</td>
+                    <td className="min-w-[70px] text-center px-1 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs">
                       {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
-                    <td className="min-w-[70px] text-center px-2 py-2 align-middle text-red-600 font-medium whitespace-nowrap text-xs">
+                    <td className="min-w-[70px] text-center px-1 py-2 align-middle text-red-600 font-medium whitespace-nowrap text-xs">
                       {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
-                    <td className="min-w-[70px] text-center font-semibold px-2 py-2 align-middle whitespace-nowrap text-xs">{record.balance}</td>
-                    <td className="min-w-[95px] px-2 py-2 align-middle whitespace-nowrap">
+                    <td className="min-w-[70px] text-center font-semibold px-1 py-2 align-middle whitespace-nowrap text-xs">{record.balance}</td>
+                    <td className="min-w-[95px] px-1 py-2 align-middle whitespace-nowrap">
                       {record.expirationDate && clientNow ? (
                         <div className={cn("flex items-center gap-1 text-xs whitespace-nowrap",
                               isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
@@ -239,7 +239,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                          <span className="text-xs text-muted-foreground">N/A</span>
                       )}
                     </td>
-                    <td className="min-w-[100px] py-2 pl-2 pr-4 align-middle whitespace-nowrap">
+                    <td className="min-w-[100px] py-2 px-1 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-1 text-xs">
                         <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                         {record.userName || 'N/A'}
