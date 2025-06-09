@@ -3,12 +3,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AuthWrapper from '@/components/AuthWrapper';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, PackagePlus, Edit3, LockKeyhole, FileX2, Settings } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -26,9 +27,15 @@ export default function AdminPage() {
     }
   }, [isCurrentUserAdmin, authLoading, router, toast]);
 
+  const handleComingSoon = (featureName: string) => {
+    toast({
+      title: "Próximamente",
+      description: `La funcionalidad "${featureName}" estará disponible pronto.`,
+      variant: "default",
+    });
+  };
+
   if (authLoading || !isCurrentUserAdmin) {
-    // Show loading or redirect will handle via useEffect
-    // To prevent flash of content for non-admins, we can return a loader or null
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
           <ShieldAlert className="h-16 w-16 text-primary animate-pulse" />
@@ -49,20 +56,53 @@ export default function AdminPage() {
         </Button>
       </div>
       <div className="flex flex-col items-center justify-center">
-        <Card className="w-full max-w-2xl shadow-lg">
+        <Card className="w-full max-w-3xl shadow-lg">
           <CardHeader className="text-center">
+             <Settings className="h-12 w-12 mx-auto text-primary mb-3" />
             <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
               Panel de Administración
             </CardTitle>
+            <CardDescription>
+              Gestiona el inventario, recetas y otras configuraciones del sistema.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">
-              Bienvenido al panel de administración. Aquí podrás gestionar usuarios, inventario y otras configuraciones del sistema.
+          <CardContent className="p-6 space-y-8">
+            {/* Gestión de Inventario */}
+            <div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Inventario</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Link href="/stock-entry" passHref legacyBehavior>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <PackagePlus className="mr-3 h-6 w-6 text-primary" />
+                    Añadir Stock
+                  </Button>
+                </Link>
+                <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Editar Medicamentos')}>
+                  <Edit3 className="mr-3 h-6 w-6 text-accent" />
+                  Editar Medicamentos
+                </Button>
+                <Button variant="outline" className="w-full justify-start text-base py-6 sm:col-span-2" onClick={() => handleComingSoon('Gestionar Lotes (Bloquear/Editar Vencimiento)')}>
+                  <LockKeyhole className="mr-3 h-6 w-6 text-destructive" />
+                  Gestionar Lotes (Bloquear/Editar Vencimiento)
+                </Button>
+              </div>
+            </div>
+
+            {/* Gestión de Recetas */}
+            <div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Recetas</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Anular Receta')}>
+                  <FileX2 className="mr-3 h-6 w-6 text-destructive" />
+                  Anular Receta
+                </Button>
+              </div>
+            </div>
+
+            {/* Placeholder para más funcionalidades */}
+            <p className="text-center text-muted-foreground mt-6">
+              Más herramientas de administración se añadirán aquí progresivamente.
             </p>
-            <p className="text-center text-muted-foreground mt-4">
-              (Más funcionalidades serán añadidas aquí pronto)
-            </p>
-            {/* Placeholder for future admin functionalities */}
           </CardContent>
         </Card>
       </div>
