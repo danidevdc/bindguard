@@ -186,20 +186,20 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         <div>
           <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
           <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
-            <table className="w-full table-fixed text-sm">
+            <table className="w-full text-sm"> {/* Removed table-fixed */}
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
                   <th className="min-w-[90px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">Fecha</th>
-                  <th className="min-w-[105px] px-2 text-left align-middle font-medium text-muted-foreground">
-                    <span className="block md:hidden">Nº<br />RECETA</span>
-                    <span className="hidden md:inline whitespace-nowrap">Nº RECETA</span>
+                  <th className="min-w-[105px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
+                    <span className="block md:hidden">Nº RECETA</span> {/* Removed <br/> */}
+                    <span className="hidden md:inline">Nº RECETA</span>
                   </th>
                   <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Entrada</th>
                   <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Salida</th>
                   <th className="min-w-[70px] px-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap">Saldo</th>
-                  <th className="min-w-[95px] px-2 text-left align-middle font-medium text-muted-foreground">
-                     <span className="block md:hidden">Fecha<br />Exp.</span>
-                     <span className="hidden md:inline whitespace-nowrap">Fecha Exp.</span>
+                  <th className="min-w-[95px] px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
+                     <span className="block md:hidden">Fecha Exp.</span> {/* Removed <br/> */}
+                     <span className="hidden md:inline">Fecha Exp.</span>
                   </th>
                   <th className="pl-2 pr-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap min-w-[100px]">Usuario</th>
                 </tr>
@@ -262,3 +262,5 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
+
+    
