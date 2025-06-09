@@ -167,7 +167,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 md:space-y-4 px-2 py-3 sm:px-4 sm:py-3 md:p-6">
-        <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md">
+        <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md shadow-md">
           <div className="flex items-center space-x-2 text-foreground">
             <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-primary" />
             <span className="font-medium text-sm md:text-base">Stock Actual:</span>
@@ -223,19 +223,15 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     </td>
                     <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-border">{record.balance}</td>
                     <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-border text-center justify-center">
-                      {record.expirationDate && clientNow ? (
-                        <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
-                              isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
-                              isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
+                      <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
+                              clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
+                              clientNow && record.expirationDate && isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
                           )}>
-                          {isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
-                          {isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                          {!isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
-                          {format(parseISO(record.expirationDate), 'MM/yy', { locale: es })}
+                          {clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
+                          {clientNow && record.expirationDate && isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
+                          {clientNow && record.expirationDate && !isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                          {record.expirationDate ? format(parseISO(record.expirationDate), 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
                         </div>
-                      ) : (
-                         <span className="text-xs text-muted-foreground">N/A</span>
-                      )}
                     </td>
                     <td className="min-w-[100px] py-2 px-0 align-middle whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-1 text-xs">
@@ -260,5 +256,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
-    
