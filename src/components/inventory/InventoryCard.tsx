@@ -188,7 +188,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10">
-                <tr className="h-10 bg-card shadow-md">
+                <tr className="h-10 bg-muted shadow-md">
                   <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Fecha</th>
                   <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">
                     Pedidos
@@ -260,6 +260,5 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
 
     
