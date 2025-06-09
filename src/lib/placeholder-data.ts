@@ -28,10 +28,10 @@ export const mockMedicines: Medicine[] = [
     currentStock: 130, 
     lastUpdated: '2024-07-28',
     dispensingHistory: [
-      { id: 'hist000_init_MED001', date: '2024-07-20', rxNumber: 'STK765432', quantity: 100, type: 'stocked', userName: 'laura.perez', expirationDate: '2025-12-31' },
-      { id: 'hist003', date: '2024-07-22', rxNumber: '433209', quantity: 50, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' }, // Taken from STK765432
-      { id: 'hist002', date: '2024-07-25', rxNumber: 'STK221931', quantity: 100, type: 'stocked', userName: 'ana.martinez', expirationDate: '2026-06-30' },
-      { id: 'hist001', date: '2024-07-28', rxNumber: '87650012', quantity: 20, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' }, // Taken from remaining STK765432
+      { id: 'hist000_init_MED001', date: '2024-07-20', rxNumber: 'alm765', quantity: 100, type: 'stocked', userName: 'laura.perez', expirationDate: '2025-12-31' },
+      { id: 'hist003', date: '2024-07-22', rxNumber: '433209', quantity: 50, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' }, // Taken from alm765
+      { id: 'hist002', date: '2024-07-25', rxNumber: 'alm221', quantity: 100, type: 'stocked', userName: 'ana.martinez', expirationDate: '2026-06-30' },
+      { id: 'hist001', date: '2024-07-28', rxNumber: '87650012', quantity: 20, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' }, // Taken from remaining alm765
     ],
   },
   {
@@ -41,9 +41,9 @@ export const mockMedicines: Medicine[] = [
     currentStock: 250, 
     lastUpdated: '2024-07-27',
     dispensingHistory: [
-      { id: 'hist000_init_MED002', date: '2024-07-24', rxNumber: 'STK1234567', quantity: 200, type: 'stocked', userName: 'juan.diaz', expirationDate: '2025-10-31' },
-      { id: 'hist005', date: '2024-07-26', rxNumber: 'STK876543', quantity: 100, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2026-08-31' },
-      { id: 'hist004', date: '2024-07-27', rxNumber: '22193170', quantity: 50, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2025-10-31' }, // Taken from STK1234567 (earlier exp)
+      { id: 'hist000_init_MED002', date: '2024-07-24', rxNumber: 'alm123', quantity: 200, type: 'stocked', userName: 'juan.diaz', expirationDate: '2025-10-31' },
+      { id: 'hist005', date: '2024-07-26', rxNumber: 'alm876', quantity: 100, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2026-08-31' },
+      { id: 'hist004', date: '2024-07-27', rxNumber: '22193170', quantity: 50, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2025-10-31' }, // Taken from alm123 (earlier exp)
     ],
   },
   {
@@ -53,8 +53,8 @@ export const mockMedicines: Medicine[] = [
     currentStock: 75,
     lastUpdated: '2024-07-29',
     dispensingHistory: [
-      { id: 'hist007', date: '2024-07-20', rxNumber: 'STK000003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
-      { id: 'hist006', date: '2024-07-29', rxNumber: '555666', quantity: 25, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-07-31' }, // Taken from STK000003
+      { id: 'hist007', date: '2024-07-20', rxNumber: 'alm003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
+      { id: 'hist006', date: '2024-07-29', rxNumber: '555666', quantity: 25, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-07-31' }, // Taken from alm003
     ],
   },
   {
@@ -64,9 +64,9 @@ export const mockMedicines: Medicine[] = [
     currentStock: 40, 
     lastUpdated: '2024-07-28',
     dispensingHistory: [
-        { id: 'hist010', date: '2024-07-25', rxNumber: 'STK444555', quantity: 50, type: 'stocked', userName: 'laura.perez', expirationDate: '2026-01-31' },
-        { id: 'hist009', date: '2024-07-27', rxNumber: '112200', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' }, // Taken from STK444555
-        { id: 'hist008', date: '2024-07-28', rxNumber: '33440011', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' }, // Taken from STK444555
+        { id: 'hist010', date: '2024-07-25', rxNumber: 'alm445', quantity: 50, type: 'stocked', userName: 'laura.perez', expirationDate: '2026-01-31' },
+        { id: 'hist009', date: '2024-07-27', rxNumber: '112200', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' }, // Taken from alm445
+        { id: 'hist008', date: '2024-07-28', rxNumber: '33440011', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' }, // Taken from alm445
     ]
   },
   {
@@ -76,8 +76,9 @@ export const mockMedicines: Medicine[] = [
     currentStock: 8, 
     lastUpdated: '2024-07-30',
     dispensingHistory: [
-        { id: 'hist012', date: '2024-07-28', rxNumber: 'STK990011', quantity: 18, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2025-05-31'},
-        { id: 'hist011', date: '2024-07-30', rxNumber: '998877', quantity: 10, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-05-31' }, // Taken from STK990011
+        { id: 'hist012', date: '2024-07-28', rxNumber: 'alm990', quantity: 18, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2025-05-31'},
+        { id: 'hist011', date: '2024-07-30', rxNumber: '998877', quantity: 10, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-05-31' }, // Taken from alm990
     ]
   }
 ];
+
