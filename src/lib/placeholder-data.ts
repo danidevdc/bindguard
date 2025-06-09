@@ -25,27 +25,27 @@ export const mockMedicines: Medicine[] = [
     id: 'MED001',
     name: 'Amoxicillin 250mg Capsules',
     description: 'Broad-spectrum antibiotic',
-    currentStock: 2000, // Updated: 100 - 50 + 100 - 20 + 1500 - 1000 + 2000 - 500 - 30 = 2000
-    lastUpdated: '2024-08-05', // Updated
+    currentStock: 2000,
+    lastUpdated: '2024-08-05',
     dispensingHistory: [
       { id: 'hist000_init_MED001', date: '2024-07-20', rxNumber: 'alm765', quantity: 100, type: 'stocked', userName: 'laura.perez', expirationDate: '2025-12-31' },
-      { id: 'hist003', date: '2024-07-22', rxNumber: '433209', quantity: 50, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' },
+      { id: 'hist003', date: '2024-07-22', rxNumber: '43320911', quantity: 50, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' },
       { id: 'hist002', date: '2024-07-25', rxNumber: 'alm221', quantity: 100, type: 'stocked', userName: 'ana.martinez', expirationDate: '2026-06-30' },
       { id: 'hist001', date: '2024-07-28', rxNumber: '87650012', quantity: 20, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' },
       { id: 'hist_med001_005', date: '2024-07-29', rxNumber: 'alm500', quantity: 1500, type: 'stocked', userName: 'ana.martinez', expirationDate: '2027-01-31' },
-      { id: 'hist_med001_006', date: '2024-07-30', rxNumber: '700123', quantity: 1000, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' },
+      { id: 'hist_med001_006', date: '2024-07-30', rxNumber: '70012345', quantity: 1000, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' },
       { id: 'hist_med001_007', date: '2024-08-01', rxNumber: 'alm501', quantity: 2000, type: 'stocked', userName: 'laura.perez', expirationDate: '2027-07-30'},
-      { id: 'hist_med001_008', date: '2024-08-03', rxNumber: '700125', quantity: 500, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2026-06-30' },
-      { id: 'hist_med001_009', date: '2024-08-04', rxNumber: '700126', quantity: 30, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-06-30' },
-      { id: 'hist_med001_010', date: '2024-08-05', rxNumber: '700128', quantity: 100, type: 'dispensed', userName: 'ana.martinez', expirationDate: '2027-01-31'},
+      { id: 'hist_med001_008', date: '2024-08-03', rxNumber: '70012567', quantity: 500, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2026-06-30' },
+      { id: 'hist_med001_009', date: '2024-08-04', rxNumber: '70012689', quantity: 30, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-06-30' },
+      { id: 'hist_med001_010', date: '2024-08-05', rxNumber: '70012800', quantity: 100, type: 'dispensed', userName: 'ana.martinez', expirationDate: '2027-01-31'},
     ],
   },
   {
     id: 'MED002',
     name: 'Paracetamol 500mg Tablets',
     description: 'Analgesic and antipyretic',
-    currentStock: 1700, // Updated: 200 + 100 - 50 + 2000 - 300 - 150 + 500 - 100 = 1700
-    lastUpdated: '2024-08-06', // Updated
+    currentStock: 1500, // Corrected from 1700
+    lastUpdated: '2024-08-06',
     dispensingHistory: [
       { id: 'hist000_init_MED002', date: '2024-07-24', rxNumber: 'alm123', quantity: 200, type: 'stocked', userName: 'juan.diaz', expirationDate: '2025-10-31' },
       { id: 'hist005', date: '2024-07-26', rxNumber: 'alm876', quantity: 100, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2026-08-31' },
