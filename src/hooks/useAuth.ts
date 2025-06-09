@@ -5,48 +5,66 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
-const RXLOCAL_USERS_KEY = 'rxlocal_users_v2'; // Stores array of {username, password, firstName, lastName}
-const RXLOCAL_CURRENT_USER_KEY = 'rxlocal_currentUser_v2'; // Stores username (nombre.apellido) of logged-in user
+const RXLOCAL_USERS_KEY = 'rxlocal_users_v2'; 
+const RXLOCAL_CURRENT_USER_KEY = 'rxlocal_currentUser_v2'; 
 
 interface UserData {
-  username: string; // nombre.apellido
+  username: string; 
   password?: string;
   firstName: string;
   lastName: string;
+  isAdmin?: boolean; 
 }
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null); // Stores username: nombre.apellido
+  const [currentUser, setCurrentUser] = useState<string | null>(null); 
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    try {
-      const storedCurrentUserUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
-      if (storedCurrentUserUsername) {
-        setIsAuthenticated(true);
-        setCurrentUser(storedCurrentUserUsername);
-      } else {
-        setIsAuthenticated(false);
-        setCurrentUser(null);
-      }
-    } catch (error) {
-      console.warn('localStorage not available for auth check, defaulting to unauthenticated.');
-      setIsAuthenticated(false);
-      setCurrentUser(null);
+  const initializeDefaultAdmin = (users: UserData[]): UserData[] => {
+    const adminExists = users.some(u => u.username === 'admin.admin');
+    if (!adminExists) {
+      const adminUser: UserData = {
+        username: 'admin.admin',
+        password: 'admin123', 
+        firstName: 'Admin',
+        lastName: 'User',
+        isAdmin: true,
+      };
+      users.push(adminUser);
+      console.log("Default admin user created.");
     }
-    setIsLoading(false);
-  }, []);
+    return users;
+  };
 
   const getUsers = (): UserData[] => {
     try {
-      const usersJson = localStorage.getItem(RXLOCAL_USERS_KEY);
-      return usersJson ? JSON.parse(usersJson) : [];
+      let usersJson = localStorage.getItem(RXLOCAL_USERS_KEY);
+      let users: UserData[] = usersJson ? JSON.parse(usersJson) : [];
+      
+      // Ensure default admin exists
+      if (users.length === 0) { // Or any other logic to ensure admin is created once
+         users = initializeDefaultAdmin(users);
+         saveUsers(users); // Save back if admin was added
+      } else {
+        // Check if admin exists if users array is not empty but could have been cleared partially
+        const adminExists = users.some(u => u.username === 'admin.admin');
+        if (!adminExists) {
+            users = initializeDefaultAdmin(users);
+            saveUsers(users);
+        }
+      }
+      return users;
     } catch (error) {
       console.warn('Error reading users from localStorage', error);
-      return [];
+      // Attempt to re-initialize if error occurs, e.g., corrupted data
+      let users: UserData[] = [];
+      users = initializeDefaultAdmin(users);
+      saveUsers(users);
+      return users;
     }
   };
 
@@ -57,6 +75,37 @@ export function useAuth() {
       console.warn('Error saving users to localStorage', error);
     }
   };
+
+  useEffect(() => {
+    // Ensure users (and admin) are initialized on load
+    getUsers(); 
+
+    try {
+      const storedCurrentUserUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
+      if (storedCurrentUserUsername) {
+        const users = getUsers(); // Get users again to check admin status
+        const loggedInUser = users.find(u => u.username === storedCurrentUserUsername);
+        if (loggedInUser) {
+            setIsAuthenticated(true);
+            setCurrentUser(loggedInUser.username);
+            setIsCurrentUserAdmin(!!loggedInUser.isAdmin);
+        } else {
+            // User in localStorage but not in users list (edge case, e.g. users cleared)
+            logout(); // Force logout
+        }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setIsCurrentUserAdmin(false);
+      }
+    } catch (error) {
+      console.warn('localStorage not available for auth check, defaulting to unauthenticated.');
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setIsCurrentUserAdmin(false);
+    }
+    setIsLoading(false);
+  }, []);
 
   const login = useCallback(async (username?: string, password?: string) => {
     setIsLoading(true);
@@ -73,6 +122,7 @@ export function useAuth() {
       localStorage.setItem(RXLOCAL_CURRENT_USER_KEY, user.username);
       setIsAuthenticated(true);
       setCurrentUser(user.username);
+      setIsCurrentUserAdmin(!!user.isAdmin);
       const capitalizedFirstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1).toLowerCase();
       toast({ title: "Inicio de Sesión Exitoso", description: `¡Bienvenido de nuevo, ${capitalizedFirstName}!` });
       router.push('/dashboard');
@@ -80,6 +130,7 @@ export function useAuth() {
       toast({ title: "Error de Inicio de Sesión", description: "Credenciales incorrectas. Inténtalo de nuevo.", variant: "destructive" });
       setIsAuthenticated(false);
       setCurrentUser(null);
+      setIsCurrentUserAdmin(false);
     }
     setIsLoading(false);
   }, [router, toast]);
@@ -105,13 +156,14 @@ export function useAuth() {
       username: generatedUsername, 
       password,
       firstName: firstName.trim(),
-      lastName: lastName.trim()
+      lastName: lastName.trim(),
+      isAdmin: false, // New users are not admins by default
     };
     saveUsers([...users, newUser]);
     
     const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
     toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Ahora puedes iniciar sesión con el usuario: ${newUser.username}` });
-    await login(newUser.username, password); // Auto-login after registration
+    await login(newUser.username, password); 
     setIsLoading(false);
   }, [toast, login]);
 
@@ -119,6 +171,7 @@ export function useAuth() {
     localStorage.removeItem(RXLOCAL_CURRENT_USER_KEY);
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setIsCurrentUserAdmin(false);
     router.push('/login');
     toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
   }, [router, toast]);
@@ -131,8 +184,6 @@ export function useAuth() {
     }
   }, []);
   
-  // Helper function to get full user details, not used externally by components directly yet
-  // but useful for internal logic or future expansion.
   const getCurrentUserDetails = useCallback((): UserData | null => {
     const username = getCurrentUserUsername();
     if (!username) return null;
@@ -141,5 +192,5 @@ export function useAuth() {
   }, [getCurrentUserUsername]);
 
 
-  return { isAuthenticated, isLoading, currentUser, login, register, logout, getCurrentUserUsername, getCurrentUserDetails };
+  return { isAuthenticated, isLoading, currentUser, isCurrentUserAdmin, login, register, logout, getCurrentUserUsername, getCurrentUserDetails };
 }
