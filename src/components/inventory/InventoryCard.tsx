@@ -190,7 +190,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
               <thead className="bg-card sticky top-0 z-10">
                 <tr className="h-10 shadow-[0_1px_0_0_hsl(var(--border))]">
                   <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Fecha</th>
-                  <th className="min-w-[90px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">
+                  <th className="min-w-[80px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">
                     Pedidos
                   </th>
                   <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Entrada</th>
@@ -214,7 +214,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     )}
                   >
                     <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                    <td className="min-w-[90px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{record.rxNumber}</td>
+                    <td className="min-w-[80px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{record.rxNumber}</td>
                     <td className="min-w-[70px] text-center px-0 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs border-r border-border">
                       {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                     </td>
@@ -260,4 +260,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </Card>
   );
 }
-
