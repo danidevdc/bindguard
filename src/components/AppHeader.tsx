@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Pill, LogOut, Home as HomeIcon } from 'lucide-react'; // Added HomeIcon
+import { Pill, LogOut, Home as HomeIcon } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -14,9 +14,9 @@ export default function AppHeader() {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/dashboard" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
           <Pill className="h-7 w-7" />
-          <h1 className="text-xl font-semibold">RxLocal Inventory</h1>
+          <h1 className="text-xl font-semibold">BindGuard</h1>
         </Link>
-        <div className="flex items-center space-x-2"> {/* Group for right-side buttons */}
+        <div className="flex items-center space-x-2"> 
           <Link href="/dashboard" passHref legacyBehavior>
             <Button variant="ghost" className="text-primary hover:bg-primary/10">
               <HomeIcon className="mr-2 h-5 w-5" />

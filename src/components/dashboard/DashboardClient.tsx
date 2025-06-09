@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 
 export default function DashboardClient() {
-  const { currentUser } = useAuth(); // currentUser is username: nombre.apellido
+  const { currentUser } = useAuth(); 
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function DashboardClient() {
         const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
         setDisplayName(capitalizedFirstName);
       } else {
-        setDisplayName(currentUser); // Fallback if format is unexpected
+        setDisplayName(currentUser); 
       }
     }
   }, [currentUser]);
@@ -32,7 +32,7 @@ export default function DashboardClient() {
           <CardTitle className="text-2xl font-semibold">
             {displayName ? `Hola, ${displayName}` : 'Bienvenido'}
           </CardTitle>
-          {/* Description removed as per request */}
+          
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
           <Link href="/scan" passHref legacyBehavior>
@@ -42,7 +42,8 @@ export default function DashboardClient() {
               aria-label="Escanear Medicamento"
             >
               <QrCode className="h-16 w-16 mb-3" />
-              Escanear Medicamento
+              <span>Escanear</span>
+              <span>Medicamento</span>
             </Button>
           </Link>
           <Link href="/inventory" passHref legacyBehavior>

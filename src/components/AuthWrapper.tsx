@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/hooks/useAuth';
@@ -33,9 +34,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   }
   
   if (!isAuthenticated) {
-     // This case should ideally be handled by the useEffect redirect,
-     // but as a fallback, show loading or redirect again.
-     // Returning null avoids rendering children if not authenticated.
+     
     return null; 
   }
 
@@ -47,7 +46,7 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
         {children}
       </main>
       <footer className="py-4 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} RxLocal Inventory. All rights reserved.
+        © {new Date().getFullYear()} BindGuard. All rights reserved.
       </footer>
     </div>
   );
