@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, PackagePlus, Edit3, LockKeyhole, FileX2, Settings } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, PackagePlus, Edit3, LockKeyhole, FileX2, Settings, PillBottle } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -69,19 +69,25 @@ export default function AdminPage() {
           <CardContent className="p-6 space-y-8">
             {/* Gestión de Inventario */}
             <div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Inventario</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Medicamentos e Inventario</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link href="/stock-entry" passHref legacyBehavior>
+                <Link href="/admin/add-medicine" passHref legacyBehavior>
                   <Button variant="outline" className="w-full justify-start text-base py-6">
-                    <PackagePlus className="mr-3 h-6 w-6 text-primary" />
-                    Añadir Stock
+                    <PillBottle className="mr-3 h-6 w-6 text-primary" />
+                    Añadir Nuevo Medicamento
+                  </Button>
+                </Link>
+                 <Link href="/stock-entry" passHref legacyBehavior>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <PackagePlus className="mr-3 h-6 w-6 text-accent" />
+                    Añadir Stock (Lote Existente)
                   </Button>
                 </Link>
                 <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Editar Medicamentos')}>
-                  <Edit3 className="mr-3 h-6 w-6 text-accent" />
+                  <Edit3 className="mr-3 h-6 w-6 text-green-600" />
                   Editar Medicamentos
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-base py-6 sm:col-span-2" onClick={() => handleComingSoon('Gestionar Lotes (Bloquear/Editar Vencimiento)')}>
+                <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Gestionar Lotes (Bloquear/Editar Vencimiento)')}>
                   <LockKeyhole className="mr-3 h-6 w-6 text-destructive" />
                   Gestionar Lotes (Bloquear/Editar Vencimiento)
                 </Button>
