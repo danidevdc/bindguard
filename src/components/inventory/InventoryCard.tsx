@@ -1,12 +1,12 @@
 
 "use client";
 
-import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
+import type { Medicine, DispensingRecord } from '@/lib/medicineService'; // Updated import
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download, QrCode } from 'lucide-react';
-import { format, parseISO, compareAsc } from 'date-fns';
+import { format, compareAsc } from 'date-fns'; // Removed parseISO as it's not needed for Date objects
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import type { Timestamp } from 'firebase/firestore'; // Import Timestamp
 
 interface InventoryCardProps {
   medicine: Medicine;
@@ -45,9 +46,11 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     setClientNow(new Date());
   }, []);
 
-  const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) =>
-    compareAsc(parseISO(a.date), parseISO(b.date))
-  );
+  const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) => {
+    const dateA = (a.date as Timestamp).toDate();
+    const dateB = (b.date as Timestamp).toDate();
+    return compareAsc(dateA, dateB);
+  });
 
   let runningBalance = 0;
   const processedHistoryWithBalance: ProcessedRecord[] = sortedHistoryForBalance.map(record => {
@@ -61,31 +64,23 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
   const displayHistory = processedHistoryWithBalance;
 
-  const isExpiredClient = (expirationDate: string | undefined, comparisonDate: Date): boolean => {
-    if (!expirationDate) return false;
+  // Modified to accept Date object directly
+  const isExpiredClient = (expirationDateInput: Date | undefined, comparisonDate: Date): boolean => {
+    if (!expirationDateInput) return false;
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
-    try {
-      const parsedExpDate = parseISO(expirationDate);
-      if (isNaN(parsedExpDate.getTime())) return false;
-      return compareAsc(parsedExpDate, comparisonDate) < 0;
-    } catch (error) {
-      return false;
-    }
+    // expirationDateInput is already a Date object
+    return compareAsc(expirationDateInput, comparisonDate) < 0;
   };
 
-  const isExpiringSoonClient = (expirationDate: string | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
-    if (!expirationDate) return false;
+  // Modified to accept Date object directly
+  const isExpiringSoonClient = (expirationDateInput: Date | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
+    if (!expirationDateInput) return false;
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
-    try {
-      const expDate = parseISO(expirationDate);
-      if (isNaN(expDate.getTime())) return false;
-
-      const diffTime = expDate.getTime() - comparisonDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 0 && diffDays <= daysThreshold;
-    } catch (error) {
-      return false;
-    }
+    
+    // expirationDateInput is already a Date object
+    const diffTime = expirationDateInput.getTime() - comparisonDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 && diffDays <= daysThreshold;
   };
 
   const handleDownloadExcel = () => {
@@ -109,10 +104,13 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     processedHistoryWithBalance.forEach(record => {
       const entrada = record.type === 'stocked' ? record.quantity : '';
       const salida = record.type === 'dispensed' ? record.quantity : '';
-      const fechaExp = record.expirationDate ? format(parseISO(record.expirationDate), 'MM/yy', { locale: es }) : 'N/A';
+      const recordDateJs = (record.date as Timestamp).toDate();
+      const recordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
+      
+      const fechaExp = recordExpDateJs ? format(recordExpDateJs, 'MM/yy', { locale: es }) : 'N/A';
 
       dataForExcel.push([
-        format(parseISO(record.date), 'dd/MM/yy', { locale: es }),
+        format(recordDateJs, 'dd/MM/yy', { locale: es }),
         record.rxNumber,
         entrada,
         salida,
@@ -261,44 +259,49 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-b-0">
-                  {displayHistory.map((record) => (
-                    <tr
-                      key={record.id}
-                      className={cn(
-                        "border-b border-border",
-                        clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow)
-                        ? 'bg-red-100 dark:bg-red-900/30'
-                        : ''
-                      )}
-                    >
-                      <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{format(parseISO(record.date), 'dd/MM/yy', { locale: es })}</td>
-                      <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{record.rxNumber}</td>
-                      <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs border-r border-border">
-                        {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
-                      </td>
-                      <td className="min-w-[60px] text-center px-0 py-2 align-middle text-red-600 font-medium whitespace-nowrap text-xs border-r border-border">
-                        {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
-                      </td>
-                      <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-border">{record.balance}</td>
-                      <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-border text-center justify-center">
-                        <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
-                                clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow) ? "text-red-500" :
-                                clientNow && record.expirationDate && isExpiringSoonClient(record.expirationDate, clientNow) ? "text-orange-500" : "text-muted-foreground"
-                            )}>
-                            {clientNow && record.expirationDate && isExpiredClient(record.expirationDate, clientNow) && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
-                            {clientNow && record.expirationDate && isExpiringSoonClient(record.expirationDate, clientNow) && !isExpiredClient(record.expirationDate, clientNow) && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                            {clientNow && record.expirationDate && !isExpiredClient(record.expirationDate, clientNow) && !isExpiringSoonClient(record.expirationDate, clientNow) && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
-                            {record.expirationDate ? format(parseISO(record.expirationDate), 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
+                  {displayHistory.map((record) => {
+                    const recordDateJs = (record.date as Timestamp).toDate();
+                    const recordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
+                    const isCurrentlyExpired = clientNow && recordExpDateJs && isExpiredClient(recordExpDateJs, clientNow);
+                    const isExpiringSoon = clientNow && recordExpDateJs && isExpiringSoonClient(recordExpDateJs, clientNow);
+
+                    return (
+                      <tr
+                        key={record.id}
+                        className={cn(
+                          "border-b border-border",
+                          isCurrentlyExpired ? 'bg-red-100 dark:bg-red-900/30' : ''
+                        )}
+                      >
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{record.rxNumber}</td>
+                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs border-r border-border">
+                          {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
+                        </td>
+                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-red-600 font-medium whitespace-nowrap text-xs border-r border-border">
+                          {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
+                        </td>
+                        <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-border">{record.balance}</td>
+                        <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-border text-center justify-center">
+                          <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
+                                  isCurrentlyExpired ? "text-red-500" :
+                                  isExpiringSoon ? "text-orange-500" : "text-muted-foreground"
+                              )}>
+                              {isCurrentlyExpired && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
+                              {isExpiringSoon && !isCurrentlyExpired && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
+                              {recordExpDateJs && !isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
+                              {recordExpDateJs ? format(recordExpDateJs, 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
+                            </div>
+                        </td>
+                        <td className="min-w-[100px] py-2 px-0 align-middle whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-1 text-xs">
+                            <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
+                            {record.userName || 'N/A'}
                           </div>
-                      </td>
-                      <td className="min-w-[100px] py-2 px-0 align-middle whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-1 text-xs">
-                          <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
-                          {record.userName || 'N/A'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -309,7 +312,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground border-t pt-2 md:pt-3 pb-2 md:pb-3 px-2 sm:px-4 md:px-6">
           <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5" />
-          Última Actualización: {clientNow && medicine.lastUpdated ? format(parseISO(medicine.lastUpdated), 'dd/MM/yy HH:mm', { locale: es }) : 'Cargando...'}
+          Última Actualización: {clientNow && medicine.lastUpdated ? format((medicine.lastUpdated as Timestamp).toDate(), 'dd/MM/yy HH:mm', { locale: es }) : 'Cargando...'}
         </CardFooter>
       </Card>
 
@@ -352,3 +355,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </>
   );
 }
+
+
+    
