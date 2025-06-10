@@ -176,8 +176,10 @@ export default function ManageUsersPage() {
         </CardContent>
       </Card>
 
-      {userToDelete && (
-        <AlertDialog open={!!userToDelete} onOpenChange={(isOpen) => { if (!isOpen) setUserToDelete(null); }}>
+      <AlertDialog open={!!userToDelete} onOpenChange={(isOpen) => { if (!isOpen) setUserToDelete(null); }}>
+        {/* AlertDialogTrigger is not needed here as it's in the table rows.
+            The 'open' prop controls the dialog's visibility based on 'userToDelete' state. */}
+        {userToDelete && (
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Eliminación</AlertDialogTitle>
@@ -195,8 +197,9 @@ export default function ManageUsersPage() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
-      )}
+        )}
+      </AlertDialog>
     </AuthWrapper>
   );
 }
+
