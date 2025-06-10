@@ -18,34 +18,36 @@ let app: FirebaseApp | undefined = undefined;
 let db: Firestore | undefined = undefined;
 
 // Check if all critical Firebase config keys are present
-const requiredConfigKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
-const missingKeys = requiredConfigKeys.filter(key => !(firebaseConfig as any)[key]);
+const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
+const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
 
 if (missingKeys.length > 0) {
   console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file.`);
-  // If critical keys are missing, we do not attempt to initialize.
-  // db and app will remain undefined.
+  // If critical keys are missing, app and db will remain undefined.
 } else {
   if (!getApps().length) {
     try {
       app = initializeApp(firebaseConfig);
       console.log("Firebase app initialized successfully.");
-      db = getFirestore(app);
-      console.log("Firestore instance initialized successfully.");
     } catch (error: any) {
-      console.error("Firebase initialization error:", error.message, error.code);
-      // app and db might remain undefined if an error occurs here.
+      console.error("Firebase app initialization error:", error.message, error.code);
+      // app will remain undefined if initialization fails
     }
   } else {
     app = getApps()[0];
     console.log("Firebase app already initialized.");
+  }
+
+  if (app) { // Only try to get Firestore if app was successfully initialized/obtained
     try {
-      db = getFirestore(app); // Ensure db is assigned in this case as well.
-      console.log("Firestore instance obtained successfully for already initialized app.");
+      db = getFirestore(app);
+      console.log("Firestore instance obtained successfully.");
     } catch (error: any) {
-      console.error("Firestore instance initialization error for existing app:", error.message, error.code);
-      // db might remain undefined.
+      console.error("Firestore instance initialization error:", error.message, error.code);
+      // db will remain undefined if Firestore initialization fails
     }
+  } else {
+    console.error("Firebase app is not available, Firestore instance cannot be obtained.");
   }
 }
 
