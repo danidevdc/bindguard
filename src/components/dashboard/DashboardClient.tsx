@@ -13,26 +13,41 @@ export default function DashboardClient() {
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
-    const userDetails = getCurrentUserDetails();
-    if (userDetails) {
-        // For admin.admin, display "Admin"
-        if (userDetails.username === 'admin.admin') {
-            setDisplayName('Admin');
-        } else {
-            const firstName = userDetails.firstName;
-            const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-            setDisplayName(capitalizedFirstName);
-        }
-    } else if (currentUser) { // Fallback if details are not yet fully loaded but username is
-        const nameParts = currentUser.split('.');
-         if (nameParts.length > 0) {
-            const firstName = nameParts[0];
-            const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
-            setDisplayName(capitalizedFirstName);
-        } else {
-            setDisplayName(currentUser);
-        }
-    }
+    const fetchAndSetDisplayName = async () => {
+      const userDetails = await getCurrentUserDetails(); // Use async/await for clarity
+      if (userDetails) {
+          if (userDetails.username === 'admin.admin') {
+              setDisplayName('Admin');
+          } else if (typeof userDetails.firstName === 'string' && userDetails.firstName.trim() !== '') {
+              const firstName = userDetails.firstName;
+              const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+              setDisplayName(capitalizedFirstName);
+          } else {
+              // Fallback if firstName is not a valid string or is empty
+              setDisplayName(userDetails.username || "Usuario"); 
+          }
+      } else if (currentUser) { 
+          // Fallback to currentUser if userDetails are null but currentUser (username string) exists
+          // This part might be less common if getCurrentUserDetails always returns something or null
+          const username = typeof currentUser === 'string' ? currentUser : currentUser.username;
+          if (username) {
+            const nameParts = username.split('.');
+            if (nameParts.length > 0 && nameParts[0]) {
+                const firstNamePart = nameParts[0];
+                const capitalizedFirstName = firstNamePart.charAt(0).toUpperCase() + firstNamePart.slice(1).toLowerCase();
+                setDisplayName(capitalizedFirstName);
+            } else {
+                setDisplayName(username); // Use full username if splitting fails
+            }
+          } else {
+             setDisplayName("Bienvenido"); // Generic fallback
+          }
+      } else {
+        setDisplayName("Bienvenido"); // Most generic fallback
+      }
+    };
+
+    fetchAndSetDisplayName();
   }, [currentUser, getCurrentUserDetails]);
 
   return (
