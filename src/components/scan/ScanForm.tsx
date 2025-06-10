@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Camera, FileText, CheckCircle, AlertTriangle, Pill, ShoppingCart, CheckSquare, CalendarIcon, Trash2, ScanLine, Hash, ClipboardList, ArrowRight, PlusCircle, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [recipeDate, setRecipeDate] = useState<Date | undefined>(undefined);
 
   const [currentScannedCode, setCurrentScannedCode] = useState(''); 
+  const [manualCodeInputValue, setManualCodeInputValue] = useState(''); // For manual input
   const [identifiedMedicineName, setIdentifiedMedicineName] = useState(''); 
   const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState(''); 
 
@@ -61,6 +63,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
 
 
   useEffect(() => {
@@ -94,14 +97,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     oscillator.stop(audioContextRef.current.currentTime + 0.1); 
   };
   
-  const handleQrScanSuccess = (result: QrScanner.ScanResult) => {
-    const scannedData = result.data;
+ const handleQrScanSuccess = (result: QrScanner.ScanResult | string) => {
+    const scannedData = typeof result === 'string' ? result : result.data;
     console.log('QR Scanned Data:', scannedData);
-    playBeep();
-    setIsScanningQR(false); // This will trigger the useEffect cleanup
+    
+    setIsScanningQR(false); // This will trigger the useEffect cleanup to stop scanner
 
     let codeFromQR = '';
-    let medicineNameFromQR = '';
+    let medicineNameFromQR = ''; // Optional, for toast
 
     try {
         const parsedData = JSON.parse(scannedData);
@@ -110,16 +113,19 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             if (typeof parsedData.nombre === 'string') {
                 medicineNameFromQR = parsedData.nombre;
             }
-        } else {
+        } else { // Not JSON or no id field, treat as raw code
             codeFromQR = scannedData;
         }
-    } catch (e) {
+    } catch (e) { // Not JSON, treat as raw code
         codeFromQR = scannedData;
         console.warn('QR data is not a JSON or does not have an id field. Treating as raw ID.', e);
     }
 
     if (codeFromQR) {
+        playBeep();
         setCurrentScannedCode(codeFromQR);
+        setManualCodeInputValue(codeFromQR); // Also update manual input field
+        setShowVerificationDialog(true); // Open verification dialog
         toast({
             title: "QR Detectado",
             description: medicineNameFromQR 
@@ -135,35 +141,32 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
   };
 
+
   const handleQrScanError = (error: Error | string) => {
     console.error('QR Scan Error:', error);
      if (typeof error === 'object' && error !== null && 'message' in error) {
         if ((error as Error).message === 'No QR code found') {
-            // console.log('No QR code found in this frame.');
-            return; // Don't toast for "no QR code found"
+            return; 
         }
     } else if (typeof error === 'string' && error === 'No QR code found') {
-        // console.log('No QR code found in this frame.');
         return; 
     }
     
-    toast({
-        title: "Error de Escaneo QR",
-        description: typeof error === 'string' ? error : (error as Error).message,
-        variant: "destructive",
-    });
+    // toast({ // Commenting out to avoid excessive toasts for minor scan issues
+    //     title: "Error de Escaneo QR",
+    //     description: typeof error === 'string' ? error : (error as Error).message,
+    //     variant: "destructive",
+    // });
   };
 
   useEffect(() => {
     if (isScanningQR) {
       const startScanner = async () => {
         if (!videoRef.current) {
-          console.log("Video ref not available yet");
           return;
         }
 
         if (qrScannerRef.current) {
-            console.log("Stopping existing scanner instance.");
             qrScannerRef.current.stop();
             qrScannerRef.current.destroy();
             qrScannerRef.current = null;
@@ -175,7 +178,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(e => console.error("Video play failed:", e));
 
-          console.log("Initializing QrScanner with environment camera.");
           qrScannerRef.current = new QrScanner(
             videoRef.current,
             handleQrScanSuccess,
@@ -187,30 +189,26 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             }
           );
           await qrScannerRef.current.start();
-          console.log("QrScanner started with environment camera.");
         } catch (error: any) {
           console.error('Error accessing environment camera or starting scanner:', error);
           try { 
-            console.log("Attempting fallback to user-facing camera.");
             let fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
             if (videoRef.current) {
                 videoRef.current.srcObject = fallbackStream;
                 await videoRef.current.play().catch(e => console.error("Fallback video play failed:", e));
                 
-                console.log("Initializing QrScanner with fallback camera.");
                 qrScannerRef.current = new QrScanner(
                     videoRef.current,
                     handleQrScanSuccess,
                     {
                         onDecodeError: handleQrScanError,
-                        preferredCamera: "user",
+                        // preferredCamera: "user", // Let qr-scanner decide for fallback
                         highlightScanRegion: true,
                         highlightCodeOutline: true,
                     }
                 );
                 await qrScannerRef.current.start();
-                console.log("QrScanner started with fallback camera.");
             }
           } catch (fallbackError: any) {
              console.error('Fallback camera access error:', fallbackError);
@@ -227,7 +225,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       startScanner();
     } else {
       if (qrScannerRef.current) {
-        console.log("Stopping and destroying QrScanner instance.");
         qrScannerRef.current.stop();
         qrScannerRef.current.destroy();
         qrScannerRef.current = null;
@@ -236,14 +233,12 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
-        console.log("Video stream stopped and cleared.");
       }
     }
 
     return () => { 
       if (qrScannerRef.current) {
-        console.log("Cleaning up QrScanner instance on unmount/effect change.");
-        qrScannerRef.current.destroy(); // Use destroy for full cleanup
+        qrScannerRef.current.destroy(); 
         qrScannerRef.current = null;
       }
        if (videoRef.current && videoRef.current.srcObject) {
@@ -252,6 +247,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         videoRef.current.srcObject = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isScanningQR]);
 
 
@@ -259,6 +255,12 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     navigateBackStep: () => {
       if (isScanningQR) {
         setIsScanningQR(false);
+        return true;
+      }
+      if (showVerificationDialog) {
+        setShowVerificationDialog(false);
+        setCurrentScannedCode('');
+        setManualCodeInputValue('');
         return true;
       }
       if (step === "reviewPrescription") {
@@ -298,6 +300,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
     if (!codeToVerify) {
         toast({ title: "Error", description: "No hay código de medicamento para verificar.", variant: "destructive" });
+        setCurrentScannedCode(''); 
+        setManualCodeInputValue('');
         return;
     }
     if (!recipeDate) {
@@ -311,6 +315,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (!foundMedicine) {
         toast({ title: "Medicamento No Encontrado", description: `El medicamento con código "${codeToVerifyRaw}" no existe en la base de datos.`, variant: "destructive" });
         setCurrentScannedCode(''); 
+        setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         return;
@@ -323,6 +328,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (isDuplicateInPrescription) {
         toast({ title: "Medicamento Duplicado", description: `${foundMedicine.name} ya ha sido añadido a esta receta. No se puede agregar de nuevo.`, variant: "destructive" });
         setCurrentScannedCode('');
+        setManualCodeInputValue('');
         setIdentifiedMedicineName(''); 
         setIdentifiedMedicineCode('');
         return; 
@@ -331,7 +337,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setIdentifiedMedicineName(foundMedicine.name);
     setIdentifiedMedicineCode(foundMedicine.id);
     setStep("enterQuantity");
-    setIsScanningQR(false); 
+    setIsScanningQR(false); // Ensure camera is off
+    setCurrentScannedCode(''); // Clear for next scan/input
+    setManualCodeInputValue('');
 };
 
 
@@ -339,41 +347,22 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setIsScanningQR(prev => !prev);
     if(!isScanningQR) { 
         setCurrentScannedCode('');
+        setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setHasCameraPermission(null);
     }
   };
-
-  const handleSimulateScanForIdentification = () => {
-    const allUserMedicines = getStoredMedicines();
-    if (allUserMedicines.length === 0) {
-        toast({ title: "Error de Simulación", description: "No hay medicamentos en la base de datos para simular.", variant: "destructive"});
-        setIsScanningQR(false);
-        return;
-    }
-    const randomMedicine = allUserMedicines[Math.floor(Math.random() * allUserMedicines.length)];
-    
-    const qrDataContent = randomMedicine.id; 
-
-    if (qrDataContent) {
-        const foundMedicine = allUserMedicines.find(med => med.id.toUpperCase() === qrDataContent.toUpperCase());
-        if (foundMedicine) {
-            playBeep();
-            setCurrentScannedCode(foundMedicine.id); 
-            setIsScanningQR(false); 
-            setIdentifiedMedicineName(''); 
-            setIdentifiedMedicineCode(''); 
-            toast({ title: "QR Detectado (Simulado)", description: `${foundMedicine.name}. Verifica y continúa.`});
-        } else {
-            toast({ title: "Error de Simulación", description: "Medicamento simulado no encontrado.", variant: "destructive"});
-            setIsScanningQR(false);
-        }
+  
+  const handleManualCodeSubmit = () => {
+    if (manualCodeInputValue.trim()) {
+        setCurrentScannedCode(manualCodeInputValue.trim());
+        setShowVerificationDialog(true);
     } else {
-        toast({ title: "Error de Simulación", description: "No se pudo generar datos para el QR simulado.", variant: "destructive"});
-        setIsScanningQR(false);
+        toast({ title: "Código Requerido", description: "Ingresa un código de medicamento para verificar.", variant: "destructive"});
     }
   };
+
 
   const addCurrentMedicineToList = (): boolean => {
     if (!currentQuantity.trim()) {
@@ -418,6 +407,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const handleAddMedicineAndContinueScanning = () => {
     if (addCurrentMedicineToList()) {
       setCurrentScannedCode('');
+      setManualCodeInputValue('');
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
       setCurrentQuantity('');
@@ -436,6 +426,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
     if (itemAddedSuccessfully || medicinesInPrescription.length > 0) {
         setCurrentScannedCode('');
+        setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setCurrentQuantity('');
@@ -448,6 +439,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const handleGoToReviewFromIdentify = () => {
     if (medicinesInPrescription.length > 0) {
       setCurrentScannedCode('');
+      setManualCodeInputValue('');
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
       setCurrentQuantity('');
@@ -503,12 +495,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setPrescriptionNumber('');
     setRecipeDate(clientNow || new Date());
     setCurrentScannedCode('');
+    setManualCodeInputValue('');
     setIdentifiedMedicineName('');
     setIdentifiedMedicineCode('');
     setCurrentQuantity('');
     setMedicinesInPrescription([]);
     setIsScanningQR(false);
     setHasCameraPermission(null);
+    setShowVerificationDialog(false);
     router.push('/dashboard');
   };
 
@@ -549,109 +543,144 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
   if (step === "identifyMedicine") {
     return (
-      <Card className="w-full max-w-lg mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-xl text-center flex items-center justify-center">
-            <ScanLine className="mr-2 h-6 w-6 text-primary" />
-            Receta Nº {prescriptionNumber}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <Button type="button" variant="outline" onClick={handleScanButtonClick} className="w-full h-24 text-lg">
-                <Camera className="mr-3 h-8 w-8" />
-                {isScanningQR ? 'Cerrar Cámara' : 'Escanear Código QR'}
-            </Button>
+      <>
+        <Card className="w-full max-w-lg mx-auto shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl text-center flex items-center justify-center">
+              <ScanLine className="mr-2 h-6 w-6 text-primary" />
+              Receta Nº {prescriptionNumber}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <Button type="button" variant="outline" onClick={handleScanButtonClick} className="w-full h-24 text-lg">
+                  <Camera className="mr-3 h-8 w-8" />
+                  {isScanningQR ? 'Cerrar Cámara' : 'Escanear Código QR'}
+              </Button>
 
-            {isScanningQR && (
-              <div className="mt-2 p-2 border rounded-md bg-muted/30">
-                <video ref={videoRef} className="w-full aspect-square rounded-md bg-black" autoPlay playsInline muted />
-                {hasCameraPermission === false && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Acceso a Cámara Denegado</AlertTitle>
-                     <AlertDescription>Habilita los permisos de cámara para escanear.</AlertDescription>
-                  </Alert>
-                )}
-                 {hasCameraPermission === true && !currentScannedCode && (
-                    <p className="text-sm text-muted-foreground mt-2 text-center">Apuntando cámara a un código QR...</p>
-                )}
+              {isScanningQR && (
+                <div className="mt-2 p-2 border rounded-md bg-muted/30">
+                  <video ref={videoRef} className="w-full aspect-square rounded-md bg-black" autoPlay playsInline muted />
+                  {hasCameraPermission === false && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Acceso a Cámara Denegado</AlertTitle>
+                      <AlertDescription>Habilita los permisos de cámara para escanear.</AlertDescription>
+                    </Alert>
+                  )}
+                  {hasCameraPermission === true && (
+                      <p className="text-sm text-muted-foreground mt-2 text-center">Apuntando cámara a un código QR...</p>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="relative flex items-center">
+              <span className="flex-shrink px-3 text-muted-foreground">O</span>
+              <div className="flex-grow border-t"></div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manualCodeInput">Ingresa el código del medicamento</Label>
+              <div className="flex gap-2">
+                <Input id="manualCodeInput" type="text" placeholder="Código (Ej: MED001)"
+                  value={manualCodeInputValue} 
+                  onChange={(e) => setManualCodeInputValue(e.target.value)}
+                  disabled={isScanningQR}
+                  className="flex-grow"
+                />
+                <Button 
+                    type="button" 
+                    onClick={handleManualCodeSubmit}
+                    disabled={isScanningQR || !manualCodeInputValue.trim()}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                >
+                    Verificar
+                </Button>
               </div>
+            </div>
+
+            <div className="space-y-2 mt-4">
+                <Label htmlFor="recipeDate" className="text-accent">Fecha de la Receta</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button id="recipeDate" variant={"outline"}
+                      className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !recipeDate && "text-muted-foreground",
+                          recipeDate && "bg-accent text-accent-foreground hover:bg-accent/90 focus:ring-accent"
+                      )}>
+                      <CalendarIcon className={cn("mr-2 h-4 w-4", recipeDate && "text-accent-foreground")} />
+                      {recipeDate ? format(recipeDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={recipeDate} onSelect={setRecipeDate} initialFocus locale={es} disabled={(date) => clientNow ? date > clientNow : false} />
+                  </PopoverContent>
+                </Popover>
+            </div>
+            {medicinesInPrescription.length > 0 && (
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleGoToReviewFromIdentify}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3 mt-4"
+              >
+                <ClipboardList className="mr-2 h-5 w-5" />
+                Revisar Receta ({medicinesInPrescription.length} items)
+              </Button>
             )}
-          </div>
-          
-          <Button type="button" variant="secondary" onClick={handleSimulateScanForIdentification} className="w-full mt-2">
-                Simular Escaneo (Medicamento Existente)
-          </Button>
-
-
-          <div className="relative flex items-center">
-            <span className="flex-shrink px-3 text-muted-foreground">O</span>
-            <div className="flex-grow border-t"></div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="manualCodeInput">Ingresa el código del medicamento</Label>
-            <Input id="manualCodeInput" type="text" placeholder="Código del medicamento (Ej: MED001)"
-              value={currentScannedCode} onChange={(e) => setCurrentScannedCode(e.target.value)}
-              disabled={isScanningQR}
-            />
-          </div>
-
-          {currentScannedCode && (
-            <Card className="bg-muted/30 border-border shadow-sm mt-4">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-lg font-semibold text-foreground">Verificar Código</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 text-sm space-y-1 text-foreground">
-                <p><strong className="font-semibold">Código a Verificar:</strong> {currentScannedCode}</p>
-              </CardContent>
-              <CardFooter className="p-4 pt-2">
-                 <Button
-                    type="button"
-                    onClick={() => verifyAndPrepareMedicine(currentScannedCode)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3"
-                    disabled={!currentScannedCode.trim() || !recipeDate}
-                  >
-                    <CheckCircle className="mr-2 h-5 w-5" />
-                    Verificar y Continuar
-                  </Button>
-              </CardFooter>
-            </Card>
-          )}
-
-          <div className="space-y-2 mt-4">
-              <Label htmlFor="recipeDate" className="text-accent">Fecha de la Receta</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button id="recipeDate" variant={"outline"}
-                    className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !recipeDate && "text-muted-foreground",
-                        recipeDate && "bg-accent text-accent-foreground hover:bg-accent/90 focus:ring-accent"
-                    )}>
-                    <CalendarIcon className={cn("mr-2 h-4 w-4", recipeDate && "text-accent-foreground")} />
-                    {recipeDate ? format(recipeDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={recipeDate} onSelect={setRecipeDate} initialFocus locale={es} disabled={(date) => clientNow ? date > clientNow : false} />
-                </PopoverContent>
-              </Popover>
-          </div>
-           {medicinesInPrescription.length > 0 && (
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleGoToReviewFromIdentify}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3 mt-4"
-            >
-              <ClipboardList className="mr-2 h-5 w-5" />
-              Revisar Receta ({medicinesInPrescription.length} items)
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        <Dialog open={showVerificationDialog} onOpenChange={(isOpen) => {
+            setShowVerificationDialog(isOpen);
+            if (!isOpen) {
+                setCurrentScannedCode('');
+                setManualCodeInputValue(''); // Clear manual input if dialog is closed
+            }
+        }}>
+            <DialogContent className="sm:max-w-md border-primary shadow-lg rounded-lg">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center text-primary text-xl">
+                        <ScanLine className="mr-2 h-6 w-6" />
+                        Verificar Medicamento
+                    </DialogTitle>
+                    <DialogDescription className="pt-1">
+                        Se ha detectado el siguiente código. Confirma para añadirlo a la receta.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-6">
+                    <Label htmlFor="detectedCodeDisplay" className="text-sm font-medium text-muted-foreground">Código Detectado/Ingresado:</Label>
+                    <div id="detectedCodeDisplay" className="mt-1 text-2xl font-bold text-primary bg-primary/10 p-4 rounded-md text-center tracking-wider">
+                        {currentScannedCode}
+                    </div>
+                </div>
+                <DialogFooter className="gap-3 sm:gap-2">
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline" onClick={() => {
+                            setCurrentScannedCode('');
+                            setManualCodeInputValue('');
+                        }}>
+                            Cancelar
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        type="button"
+                        onClick={() => {
+                            verifyAndPrepareMedicine(currentScannedCode);
+                            setShowVerificationDialog(false); 
+                        }}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        disabled={!currentScannedCode.trim()}
+                    >
+                        <CheckCircle className="mr-2 h-5 w-5" />
+                        Verificar y Continuar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
