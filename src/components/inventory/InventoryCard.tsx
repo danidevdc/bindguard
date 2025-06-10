@@ -319,7 +319,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center">
                 <QrCode className="mr-2 h-5 w-5 text-primary" />
-                Código QR para: {qrDialogMedicine.name}
+                Código QR para: {qrDialogMedicine.id} - {qrDialogMedicine.name}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Este código QR contiene la identificación básica del medicamento. Puedes escanearlo o descargarlo.
