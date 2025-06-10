@@ -132,10 +132,10 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     if(worksheet['A2']) worksheet['A2'].s = headerCellStyle;
     if(worksheet['A3']) worksheet['A3'].s = headerCellStyle;
     if(worksheet['A4']) worksheet['A4'].s = headerCellStyle;
-    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle; // Adjusted index due to removed description
+    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle;
 
 
-    const historyHeaderRowIndex = 6; // Adjusted because description was removed
+    const historyHeaderRowIndex = 6; 
     ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter) => {
       const cellAddress = `${colLetter}${historyHeaderRowIndex}`;
       if (worksheet[cellAddress]) {
@@ -189,7 +189,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
             <div className="flex-grow">
               <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
               <CardDescription className="text-sm text-muted-foreground mt-0.5">
-                Presentación: {medicine.presentation}
+                {medicine.presentation}
               </CardDescription>
               <Badge
                 variant={"secondary"}
@@ -352,4 +352,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </>
   );
 }
-
