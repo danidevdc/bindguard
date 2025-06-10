@@ -2,7 +2,7 @@
 "use client";
 
 import type { Medicine, DispensingRecord } from '@/lib/placeholder-data';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download, QrCode } from 'lucide-react';
@@ -96,9 +96,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
     const dataForExcel = [
       ["Nombre Medicamento:", medicine.name],
-      ["ID:", medicine.id],
       ["Presentación:", medicine.presentation],
-      ["Descripción:", medicine.description || "Sin descripción."],
+      ["ID:", medicine.id],
       ["Stock Actual:", medicine.currentStock],
       [],
       ["Historial de Transacciones"],
@@ -133,13 +132,12 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     if(worksheet['A2']) worksheet['A2'].s = headerCellStyle;
     if(worksheet['A3']) worksheet['A3'].s = headerCellStyle;
     if(worksheet['A4']) worksheet['A4'].s = headerCellStyle;
-    if(worksheet['A5']) worksheet['A5'].s = headerCellStyle;
-    if(worksheet['A7']) worksheet['A7'].s = headerCellStyle;
+    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle; // Adjusted index due to removed description
 
 
-    const historyHeaderRowIndex = 7; // Adjusted because presentation was added
+    const historyHeaderRowIndex = 6; // Adjusted because description was removed
     ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter) => {
-      const cellAddress = `${colLetter}${historyHeaderRowIndex}`; // Adjusted
+      const cellAddress = `${colLetter}${historyHeaderRowIndex}`;
       if (worksheet[cellAddress]) {
         worksheet[cellAddress].s = headerCellStyle;
       }
@@ -190,34 +188,37 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           <div className="flex justify-between items-start gap-2">
             <div className="flex-grow">
               <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
-              <CardDescription className="text-sm">{medicine.description || 'Sin descripción.'}</CardDescription>
-              <CardDescription className="text-xs text-muted-foreground mt-0.5">Presentación: {medicine.presentation}</CardDescription>
-            </div>
-            <div className="flex-shrink-0 flex flex-col items-end space-y-1.5">
+              <CardDescription className="text-sm text-muted-foreground mt-0.5">
+                Presentación: {medicine.presentation}
+              </CardDescription>
               <Badge
                 variant={"secondary"}
-                className="whitespace-nowrap text-xs px-2 py-0.5"
+                className="whitespace-nowrap text-xs px-2 py-0.5 mt-1.5 inline-block"
               >
                 ID: {medicine.id}
               </Badge>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleDownloadExcel}
-                  size="sm"
-                  variant="default"
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
-                >
-                  <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  Ficha
-                </Button>
+            </div>
+            <div className="flex-shrink-0">
+              <div className="flex flex-col items-end gap-1.5">
                 <Button
                   onClick={() => setQrDialogMedicine(medicine)}
                   size="sm"
                   variant="outline"
                   className="text-xs px-3 py-1 h-auto hover:bg-primary/10 hover:text-primary"
+                  title="Generar Código QR"
                 >
                   <QrCode className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   QR
+                </Button>
+                <Button
+                  onClick={handleDownloadExcel}
+                  size="sm"
+                  variant="default"
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto"
+                  title="Descargar Ficha Excel"
+                >
+                  <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  Ficha
                 </Button>
               </div>
             </div>
@@ -351,3 +352,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </>
   );
 }
+
