@@ -14,31 +14,38 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
 };
 
-let app: FirebaseApp;
-let db: Firestore;
+let app: FirebaseApp | undefined = undefined;
+let db: Firestore | undefined = undefined;
 
-// Check if all necessary Firebase config keys are present
-const आवश्यकConfigKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
-const faltantesKeys = आवश्यकConfigKeys.filter(key => !(firebaseConfig as any)[key]);
+// Check if all critical Firebase config keys are present
+const requiredConfigKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
+const missingKeys = requiredConfigKeys.filter(key => !(firebaseConfig as any)[key]);
 
-if (faltantesKeys.length > 0) {
-  console.error(`Firebase initialization failed: Missing config values for ${faltantesKeys.join(', ')}. Check your .env.local file.`);
-  // Si las claves críticas faltan, no intentamos inicializar.
-  // db y app permanecerán undefined.
+if (missingKeys.length > 0) {
+  console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file.`);
+  // If critical keys are missing, we do not attempt to initialize.
+  // db and app will remain undefined.
 } else {
   if (!getApps().length) {
     try {
       app = initializeApp(firebaseConfig);
-      console.log("Firebase initialized successfully.");
+      console.log("Firebase app initialized successfully.");
       db = getFirestore(app);
+      console.log("Firestore instance initialized successfully.");
     } catch (error: any) {
       console.error("Firebase initialization error:", error.message, error.code);
-      // db y app podrían quedar undefined si hay un error aquí.
+      // app and db might remain undefined if an error occurs here.
     }
   } else {
     app = getApps()[0];
     console.log("Firebase app already initialized.");
-    db = getFirestore(app); // Asegúrate de que db se asigne también en este caso.
+    try {
+      db = getFirestore(app); // Ensure db is assigned in this case as well.
+      console.log("Firestore instance obtained successfully for already initialized app.");
+    } catch (error: any) {
+      console.error("Firestore instance initialization error for existing app:", error.message, error.code);
+      // db might remain undefined.
+    }
   }
 }
 
