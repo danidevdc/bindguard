@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud, CalendarIcon } from 'lucide-react';
+import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud, CalendarIcon as CalendarIconLucide, Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getStoredMedicines, saveStoredMedicines, type Medicine, type DispensingRecord } from '@/lib/placeholder-data';
 import { parseISO, isValid, format as formatDate } from 'date-fns';
@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { es } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 interface MedicineJsonFormat {
@@ -33,6 +34,7 @@ export default function AddMedicinePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [clientNow, setClientNow] = useState<Date | null>(null);
+  const [formattedClientNow, setFormattedClientNow] = useState<string>('');
 
   const [medicineId, setMedicineId] = useState('');
   const [medicineName, setMedicineName] = useState('');
@@ -43,7 +45,10 @@ export default function AddMedicinePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setClientNow(new Date());
+    const now = new Date();
+    setClientNow(now);
+    setFormattedClientNow(formatDate(now, "PPP", { locale: es }));
+
     if (!authLoading && !isCurrentUserAdmin) {
       toast({
         title: 'Acceso Denegado',
@@ -98,8 +103,8 @@ export default function AddMedicinePage() {
           const parsedDate = parseISO(jsonData.expirationDate);
           if (isValid(parsedDate)) {
             setJsonExpirationDate(jsonData.expirationDate);
-            // Check if this date is in the past relative to clientNow
-            if (clientNow && parsedDate <= clientNow) {
+             // Check if this date is in the past relative to clientNow (ignoring time part for comparison)
+            if (clientNow && parsedDate < new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate())) {
                 toast({
                     title: 'Fecha de Expiración JSON en el Pasado',
                     description: 'La fecha de expiración del JSON es pasada. Por favor, elija una fecha futura o ajuste el JSON.',
@@ -171,9 +176,11 @@ export default function AddMedicinePage() {
     }
     
     let finalExpirationDate: string | undefined = undefined;
+    const todayAtMidnight = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
 
     if (manualExpirationDate) {
-        if (clientNow && manualExpirationDate <= clientNow) {
+        if (manualExpirationDate <= todayAtMidnight) {
             toast({
                 title: 'Fecha de Expiración Manual Inválida',
                 description: 'La fecha de expiración manual debe ser futura.',
@@ -184,7 +191,7 @@ export default function AddMedicinePage() {
         finalExpirationDate = formatDate(manualExpirationDate, 'yyyy-MM-dd');
     } else if (jsonExpirationDate) {
         const parsedJsonDate = parseISO(jsonExpirationDate);
-        if (clientNow && parsedJsonDate <= clientNow) {
+         if (parsedJsonDate <= todayAtMidnight) {
              toast({
                 title: 'Fecha de Expiración JSON Inválida',
                 description: 'La fecha de expiración del JSON debe ser futura.',
@@ -199,7 +206,7 @@ export default function AddMedicinePage() {
     if (stockNum > 0 && !finalExpirationDate) {
         toast({
             title: 'Fecha de Expiración Requerida',
-            description: 'Si ingresas stock inicial, debes proporcionar una fecha de expiración válida (manual o JSON).',
+            description: 'Si ingresas stock inicial, debes proporcionar una fecha de expiración válida y futura (manual o JSON).',
             variant: 'destructive',
         });
         return;
@@ -220,7 +227,7 @@ export default function AddMedicinePage() {
     if (stockNum > 0) {
       newDispensingHistory.push({
         id: `stock_init_${currentId}_${Date.now()}`,
-        date: formatDate(new Date(), 'yyyy-MM-dd'), // Corrected date formatting
+        date: formatDate(new Date(), 'yyyy-MM-dd'), 
         rxNumber: 'STOCK-INICIAL',
         quantity: stockNum,
         type: 'stocked',
@@ -288,6 +295,15 @@ export default function AddMedicinePage() {
             <CardDescription>
               Ingresa los detalles del medicamento o carga un archivo JSON.
             </CardDescription>
+            {formattedClientNow && (
+                 <Alert variant="default" className="mt-4 text-sm bg-accent/10 border-accent/30">
+                    <Info className="h-5 w-5 text-accent" />
+                    <AlertTitle className="text-accent font-semibold">Fecha Actual del Sistema</AlertTitle>
+                    <AlertDescription className="text-accent/90">
+                        Hoy es: {formattedClientNow}. Los registros usarán esta fecha.
+                    </AlertDescription>
+                </Alert>
+            )}
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-4 mb-6">
@@ -312,7 +328,7 @@ export default function AddMedicinePage() {
                 />
               </div>
                <p className="text-xs text-muted-foreground">
-                El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string, formato YYYY-MM-DD).
+                El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD).
               </p>
             </div>
             <Separator className="my-6" />
@@ -378,7 +394,7 @@ export default function AddMedicinePage() {
                             !manualExpirationDate && "text-muted-foreground"
                         )}
                         >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <CalendarIconLucide className="mr-2 h-4 w-4" />
                         {manualExpirationDate ? formatDate(manualExpirationDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
                         </Button>
                     </PopoverTrigger>
@@ -389,12 +405,15 @@ export default function AddMedicinePage() {
                         onSelect={setManualExpirationDate}
                         initialFocus
                         locale={es}
-                        disabled={(date) => clientNow ? date <= clientNow : false}
+                        disabled={(date) => {
+                            const todayAtMidnight = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                            return date <= todayAtMidnight;
+                        }}
                         />
                     </PopoverContent>
                 </Popover>
                 <p className="text-xs text-muted-foreground">
-                  Requerida si ingresas stock inicial. La fecha del JSON tiene prioridad si se carga un archivo.
+                  Requerida si ingresas stock inicial. La fecha del JSON (si existe) se usa si este campo está vacío. Debe ser futura.
                 </p>
               </div>
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -408,6 +427,5 @@ export default function AddMedicinePage() {
     </AuthWrapper>
   );
 }
-
 
     
