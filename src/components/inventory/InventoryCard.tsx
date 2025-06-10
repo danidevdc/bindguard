@@ -218,7 +218,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   title="Descargar Ficha Excel"
                 >
                   <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  Ficha
+                  Descargar Ficha
                 </Button>
               </div>
             </div>
