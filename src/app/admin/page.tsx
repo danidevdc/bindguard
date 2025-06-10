@@ -74,7 +74,7 @@ export default function AdminPage() {
                 <Link href="/admin/add-medicine" passHref legacyBehavior>
                   <Button variant="outline" className="w-full justify-start text-base py-6">
                     <PillBottle className="mr-3 h-6 w-6 text-primary" />
-                    Añadir Nuevo Medicamento
+                    Añadir Medicamento
                   </Button>
                 </Link>
                  <Link href="/stock-entry" passHref legacyBehavior>

@@ -10,10 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud } from 'lucide-react';
+import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud, CalendarIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getStoredMedicines, saveStoredMedicines, type Medicine, type DispensingRecord } from '@/lib/placeholder-data';
-import { parseISO, isValid } from 'date-fns';
+import { parseISO, isValid, format as formatDate } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { es } from 'date-fns/locale';
 
 
 interface MedicineJsonFormat {
@@ -28,15 +32,18 @@ export default function AddMedicinePage() {
   const { isCurrentUserAdmin, isLoading: authLoading, getCurrentUserUsername } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [clientNow, setClientNow] = useState<Date | null>(null);
 
   const [medicineId, setMedicineId] = useState('');
   const [medicineName, setMedicineName] = useState('');
   const [presentation, setPresentation] = useState('');
   const [initialStock, setInitialStock] = useState('');
-  const [jsonExpirationDate, setJsonExpirationDate] = useState<string | undefined>(undefined); // For storing expiration from JSON
+  const [jsonExpirationDate, setJsonExpirationDate] = useState<string | undefined>(undefined);
+  const [manualExpirationDate, setManualExpirationDate] = useState<Date | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setClientNow(new Date());
     if (!authLoading && !isCurrentUserAdmin) {
       toast({
         title: 'Acceso Denegado',
@@ -85,6 +92,7 @@ export default function AddMedicinePage() {
         setMedicineName(jsonData.name || '');
         setPresentation(jsonData.presentation || '');
         setInitialStock(stockValue);
+        setManualExpirationDate(undefined); // Clear manual date if JSON is loaded
         
         if (jsonData.expirationDate) {
           const parsedDate = parseISO(jsonData.expirationDate);
@@ -101,7 +109,6 @@ export default function AddMedicinePage() {
         } else {
           setJsonExpirationDate(undefined);
         }
-
 
         toast({
           title: 'JSON Cargado',
@@ -153,6 +160,25 @@ export default function AddMedicinePage() {
       });
       return;
     }
+    
+    if (stockNum > 0 && !manualExpirationDate && !jsonExpirationDate) {
+        toast({
+            title: 'Fecha de Expiración Requerida',
+            description: 'Si ingresas stock inicial, debes proporcionar una fecha de expiración.',
+            variant: 'destructive',
+        });
+        return;
+    }
+
+    if (manualExpirationDate && clientNow && manualExpirationDate <= clientNow) {
+        toast({
+            title: 'Fecha de Expiración Inválida',
+            description: 'La fecha de expiración manual debe ser futura.',
+            variant: 'destructive',
+        });
+        return;
+    }
+    // For JSON date, it's already validated if present
 
     const medicines = getStoredMedicines();
     if (medicines.find(med => med.id.toUpperCase() === currentId)) {
@@ -164,6 +190,13 @@ export default function AddMedicinePage() {
       return;
     }
 
+    let finalExpirationDate: string | undefined = undefined;
+    if (manualExpirationDate) {
+        finalExpirationDate = formatDate(manualExpirationDate, 'yyyy-MM-dd');
+    } else if (jsonExpirationDate) {
+        finalExpirationDate = jsonExpirationDate;
+    }
+
     const newDispensingHistory: DispensingRecord[] = [];
     if (stockNum > 0) {
       newDispensingHistory.push({
@@ -173,7 +206,7 @@ export default function AddMedicinePage() {
         quantity: stockNum,
         type: 'stocked',
         userName: getCurrentUserUsername() || 'admin.admin',
-        expirationDate: jsonExpirationDate, // Use expiration date from JSON if available
+        expirationDate: finalExpirationDate,
       });
     }
 
@@ -181,7 +214,7 @@ export default function AddMedicinePage() {
       id: currentId,
       name: currentName,
       presentation: currentPresentation,
-      description: '', // Default empty description
+      description: '', 
       currentStock: stockNum,
       lastUpdated: new Date().toISOString(),
       dispensingHistory: newDispensingHistory,
@@ -194,12 +227,12 @@ export default function AddMedicinePage() {
       description: `${newMedicine.name} (ID: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
     });
 
-    // Reset form
     setMedicineId('');
     setMedicineName('');
     setPresentation('');
     setInitialStock('');
     setJsonExpirationDate(undefined);
+    setManualExpirationDate(undefined);
   };
 
 
@@ -228,10 +261,10 @@ export default function AddMedicinePage() {
           <CardHeader className="text-center">
             <PillBottle className="h-12 w-12 mx-auto text-primary mb-3" />
             <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
-              Añadir Nuevo Medicamento
+              Añadir Medicamento
             </CardTitle>
             <CardDescription>
-              Ingresa los detalles del nuevo medicamento o carga un archivo JSON.
+              Ingresa los detalles del medicamento o carga un archivo JSON.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
@@ -257,7 +290,7 @@ export default function AddMedicinePage() {
                 />
               </div>
                <p className="text-xs text-muted-foreground">
-                El JSON debe tener los campos: `id` (string), `name` (string), `presentation` (string), `initialStock` (number/string), y opcionalmente `expirationDate` (string, formato YYYY-MM-DD).
+                El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string, formato YYYY-MM-DD).
               </p>
             </div>
             <Separator className="my-6" />
@@ -310,6 +343,37 @@ export default function AddMedicinePage() {
                   min="0"
                   className="bg-background"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="manualExpirationDate">Fecha de Expiración del Stock Inicial (Opcional)</Label>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        id="manualExpirationDate"
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !manualExpirationDate && "text-muted-foreground"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {manualExpirationDate ? formatDate(manualExpirationDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={manualExpirationDate}
+                        onSelect={setManualExpirationDate}
+                        initialFocus
+                        locale={es}
+                        disabled={(date) => clientNow ? date <= clientNow : false}
+                        />
+                    </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Requerida si ingresas stock inicial.
+                </p>
               </div>
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Save className="mr-2 h-5 w-5" />
