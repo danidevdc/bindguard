@@ -58,6 +58,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [isScanningQR, setIsScanningQR] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     const today = new Date();
@@ -65,7 +66,32 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (!recipeDate && step === "identifyMedicine") {
       setRecipeDate(today);
     }
+    // Initialize AudioContext on user interaction (e.g., when component mounts or a button is clicked)
+    // This is often required by browsers to allow audio playback.
+    if (!audioContextRef.current) {
+        try {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        } catch (e) {
+            console.warn("Web Audio API is not supported in this browser.");
+        }
+    }
   }, [step, recipeDate]);
+
+  const playBeep = () => {
+    if (!audioContextRef.current) return;
+    const oscillator = audioContextRef.current.createOscillator();
+    const gainNode = audioContextRef.current.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContextRef.current.destination);
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); // A4 note
+    gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime); // Adjust volume
+
+    oscillator.start();
+    oscillator.stop(audioContextRef.current.currentTime + 0.1); // Beep duration 100ms
+  };
 
   useEffect(() => {
     if (isScanningQR) {
@@ -77,8 +103,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             videoRef.current.srcObject = stream;
           }
         } catch (error) {
-          console.error('Error accessing camera:', error);
-          try {
+          console.error('Error accessing environment camera:', error);
+          try { // Fallback to any camera
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
             if (videoRef.current) {
@@ -117,9 +143,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         return true;
       }
       if (step === "enterQuantity") {
-        setIdentifiedMedicineName(''); // Clear identified medicine details
+        setIdentifiedMedicineName(''); 
         setIdentifiedMedicineCode('');
-        // currentScannedCode might still hold the last scanned/entered ID, could clear if needed
         setStep("identifyMedicine");
         return true;
       }
@@ -174,7 +199,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
     if (isDuplicateInPrescription) {
         toast({ title: "Medicamento Duplicado", description: `${foundMedicine.name} ya ha sido añadido a esta receta. No se puede agregar de nuevo.`, variant: "destructive" });
-        // Clear currentScannedCode so user has to scan/enter a new one or proceed to review
         setCurrentScannedCode('');
         setIdentifiedMedicineName(''); 
         setIdentifiedMedicineCode('');
@@ -183,9 +207,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
     setIdentifiedMedicineName(foundMedicine.name);
     setIdentifiedMedicineCode(foundMedicine.id);
-    // currentScannedCode is already set to the ID (either from manual input or scan result)
     setStep("enterQuantity");
-    setIsScanningQR(false); // Ensure camera is off
+    setIsScanningQR(false); 
 };
 
 
@@ -214,27 +237,27 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
     const randomMedicine = allUserMedicines[Math.floor(Math.random() * allUserMedicines.length)];
     
-    const qrJsonString = JSON.stringify({ // Simulating QR content structure
-      id: randomMedicine.id,
-      nombre: randomMedicine.name,
-      presentacion: randomMedicine.presentation,
-    });
+    // Simulate QR containing the ID directly or a JSON string with an 'id' field
+    const qrDataContent = randomMedicine.id; // Assuming QR directly contains the ID for simplicity here
 
-    try {
-        const qrData = JSON.parse(qrJsonString);
-        if (qrData && qrData.id) {
-            setCurrentScannedCode(qrData.id); // Set the code to be verified
-            // Clear previous identified names, verification will set new ones
-            setIdentifiedMedicineName(''); 
-            setIdentifiedMedicineCode('');
-            toast({ title: "QR Simulado Detectado", description: `Código: ${qrData.id}. Presiona 'Verificar y Continuar'.`});
+    if (qrDataContent) {
+        const foundMedicine = allUserMedicines.find(med => med.id.toUpperCase() === qrDataContent.toUpperCase());
+        if (foundMedicine) {
+            playBeep();
+            setCurrentScannedCode(foundMedicine.id); 
+            setIsScanningQR(false); 
+            setIdentifiedMedicineName(''); // Clear this, will be set by verifyAndPrepareMedicine
+            setIdentifiedMedicineCode(''); // Clear this
+            toast({ title: "QR Detectado", description: `${foundMedicine.name}. Verifica y continúa.`});
         } else {
-            throw new Error("Invalid QR data structure");
+            // This case should not happen if we pick from existing medicines, but as a safeguard
+            toast({ title: "Error de Simulación", description: "Medicamento simulado no encontrado.", variant: "destructive"});
+            setIsScanningQR(false);
         }
-    } catch (error) {
-        toast({ title: "Error de Simulación", description: "No se pudo procesar el QR simulado.", variant: "destructive"});
+    } else {
+        toast({ title: "Error de Simulación", description: "No se pudo generar datos para el QR simulado.", variant: "destructive"});
+        setIsScanningQR(false);
     }
-    setIsScanningQR(false); 
   };
 
   const addCurrentMedicineToList = (): boolean => {
@@ -248,28 +271,25 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       return false;
     }
     
-    // Double check for duplicates before adding (should be caught earlier, but as a safeguard)
     if (medicinesInPrescription.some(med => med.code.toUpperCase() === identifiedMedicineCode.toUpperCase())) {
         toast({ title: "Error", description: `${identifiedMedicineName} ya está en la receta.`, variant: "destructive" });
         return false;
     }
 
-
     const newMedicineEntry: MedicineForPrescription = {
-      id: Date.now().toString(), // Unique ID for this list item
+      id: Date.now().toString(), 
       name: identifiedMedicineName,
-      code: identifiedMedicineCode, // Actual medicine ID
+      code: identifiedMedicineCode, 
       quantity: quantityNum,
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
-    // Placeholder for actual inventory update
     console.log('Simulating inventory update (dispensing):', {
         date: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
         prescriptionNumber: prescriptionNumber,
         quantity: quantityNum,
         medicineName: identifiedMedicineName,
-        medicineCode: identifiedMedicineCode, // This is the actual Medicine ID
+        medicineCode: identifiedMedicineCode, 
         mode: 'dispensing',
         userName: getCurrentUserUsername() || 'System',
     });
@@ -292,23 +312,20 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
   const handleGoToReviewFromQuantity = () => {
     let itemAddedSuccessfully = false;
-    // Check if there is a medicine identified and quantity entered
     if (identifiedMedicineCode && identifiedMedicineName && currentQuantity.trim()) {
         itemAddedSuccessfully = addCurrentMedicineToList();
-        if (!itemAddedSuccessfully) return; // Stop if adding failed (e.g. last minute duplicate)
+        if (!itemAddedSuccessfully) return; 
     } else if (medicinesInPrescription.length === 0) {
-        // If no items in prescription and current item is not valid to be added
         toast({ title: "Receta Vacía", description: "Añade al menos un medicamento válido para revisar.", variant: "destructive" });
         return;
     }
-    // Proceed if item was added OR if there are already items and current fields are clear/invalid (meaning user just wants to review existing)
     if (itemAddedSuccessfully || medicinesInPrescription.length > 0) {
         setCurrentScannedCode('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setCurrentQuantity('');
         setStep("reviewPrescription");
-    } else { // This case should ideally be caught by the above checks
+    } else { 
         toast({ title: "Receta Vacía", description: "Añade al menos un medicamento para finalizar.", variant: "destructive" });
     }
   };
@@ -356,10 +373,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             toast({ title: "Cantidades Inválidas", description: "Asegúrate que todos los medicamentos tengan una cantidad válida (mayor a 0).", variant: "destructive" });
             return;
         }
-        // Here, you would actually update the master inventory in localStorage
-        // For each medicine in medicinesInPrescription, find it in getStoredMedicines() and deduct stock
-        // Also add to its dispensingHistory. This part is complex and needs careful implementation.
-        // For now, we just log.
         console.log("Prescription Confirmed:", {
             prescriptionNumber,
             recipeDate: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
@@ -437,12 +450,15 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
             {isScanningQR && (
               <div className="mt-2 p-2 border rounded-md bg-muted/30">
-                <video ref={videoRef} className="w-full aspect-video rounded-md bg-black" autoPlay playsInline muted />
+                <video ref={videoRef} className="w-full aspect-square rounded-md bg-black" autoPlay playsInline muted />
                 {hasCameraPermission === false && (
                   <Alert variant="destructive" className="mt-2">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Acceso a Cámara Denegado</AlertTitle>
                   </Alert>
+                )}
+                 {hasCameraPermission === true && !currentScannedCode && (
+                    <p className="text-sm text-muted-foreground mt-2 text-center">Apuntando cámara a un código QR...</p>
                 )}
                 <Button type="button" variant="secondary" onClick={handleSimulateScanForIdentification} className="w-full mt-2">
                     Simular Escaneo (Medicamento Existente)
@@ -547,7 +563,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             <Button
                 onClick={handleGoToReviewFromQuantity}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3"
-                // Button is active if there are items in prescription OR if current quantity is valid
                 disabled={medicinesInPrescription.length === 0 && (!currentQuantity.trim() || parseInt(currentQuantity) <= 0)}
             >
               <ClipboardList className="mr-2 h-5 w-5" />
@@ -631,4 +646,3 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
-
