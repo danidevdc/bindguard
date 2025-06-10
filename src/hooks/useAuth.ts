@@ -46,11 +46,10 @@ export function useAuth() {
       let users: UserData[] = usersJson ? JSON.parse(usersJson) : [];
       
       // Ensure default admin exists
-      if (users.length === 0) { // Or any other logic to ensure admin is created once
+      if (users.length === 0) { 
          users = initializeDefaultAdmin(users);
-         saveUsers(users); // Save back if admin was added
+         saveUsers(users); 
       } else {
-        // Check if admin exists if users array is not empty but could have been cleared partially
         const adminExists = users.some(u => u.username === 'admin.admin');
         if (!adminExists) {
             users = initializeDefaultAdmin(users);
@@ -60,7 +59,6 @@ export function useAuth() {
       return users;
     } catch (error) {
       console.warn('Error reading users from localStorage', error);
-      // Attempt to re-initialize if error occurs, e.g., corrupted data
       let users: UserData[] = [];
       users = initializeDefaultAdmin(users);
       saveUsers(users);
@@ -77,21 +75,19 @@ export function useAuth() {
   };
 
   useEffect(() => {
-    // Ensure users (and admin) are initialized on load
     getUsers(); 
 
     try {
       const storedCurrentUserUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
       if (storedCurrentUserUsername) {
-        const users = getUsers(); // Get users again to check admin status
+        const users = getUsers(); 
         const loggedInUser = users.find(u => u.username === storedCurrentUserUsername);
         if (loggedInUser) {
             setIsAuthenticated(true);
             setCurrentUser(loggedInUser.username);
             setIsCurrentUserAdmin(!!loggedInUser.isAdmin);
         } else {
-            // User in localStorage but not in users list (edge case, e.g. users cleared)
-            logout(); // Force logout
+            logout(); 
         }
       } else {
         setIsAuthenticated(false);
@@ -157,7 +153,7 @@ export function useAuth() {
       password,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      isAdmin: false, // New users are not admins by default
+      isAdmin: false, 
     };
     saveUsers([...users, newUser]);
     

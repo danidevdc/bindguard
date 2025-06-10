@@ -9,26 +9,31 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 
 export default function DashboardClient() {
-  const { currentUser, isCurrentUserAdmin } = useAuth(); 
+  const { currentUser, isCurrentUserAdmin, getCurrentUserDetails } = useAuth(); 
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentUser) {
-      const nameParts = currentUser.split('.');
-      if (nameParts.length > 0) {
+    const userDetails = getCurrentUserDetails();
+    if (userDetails) {
         // For admin.admin, display "Admin"
-        if (currentUser === 'admin.admin') {
+        if (userDetails.username === 'admin.admin') {
             setDisplayName('Admin');
         } else {
+            const firstName = userDetails.firstName;
+            const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+            setDisplayName(capitalizedFirstName);
+        }
+    } else if (currentUser) { // Fallback if details are not yet fully loaded but username is
+        const nameParts = currentUser.split('.');
+         if (nameParts.length > 0) {
             const firstName = nameParts[0];
             const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
             setDisplayName(capitalizedFirstName);
+        } else {
+            setDisplayName(currentUser);
         }
-      } else {
-        setDisplayName(currentUser); 
-      }
     }
-  }, [currentUser]);
+  }, [currentUser, getCurrentUserDetails]);
 
   return (
     <div className="flex flex-col items-center justify-center">
