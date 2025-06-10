@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud, CalendarIcon as CalendarIconLucide, Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { getStoredMedicines, saveStoredMedicines, type Medicine, type DispensingRecord } from '@/lib/placeholder-data';
+import { type Medicine, type DispensingRecord, getMedicineByIdFromFirestore, createCompleteMedicineInFirestore } from '@/lib/medicineService';
+import { Timestamp, serverTimestamp } from 'firebase/firestore';
 import { parseISO, isValid, format as formatDate } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -93,7 +94,7 @@ export default function AddMedicinePage() {
             }
         }
 
-        setMedicineId(jsonData.id || '');
+        setMedicineId(jsonData.id?.toUpperCase() || '');
         setMedicineName(jsonData.name || '');
         setPresentation(jsonData.presentation || '');
         setInitialStock(stockValue);
@@ -103,14 +104,13 @@ export default function AddMedicinePage() {
           const parsedDate = parseISO(jsonData.expirationDate);
           if (isValid(parsedDate)) {
             setJsonExpirationDate(jsonData.expirationDate);
-             // Check if this date is in the past relative to clientNow (ignoring time part for comparison)
             if (clientNow && parsedDate < new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate())) {
                 toast({
                     title: 'Fecha de Expiración JSON en el Pasado',
                     description: 'La fecha de expiración del JSON es pasada. Por favor, elija una fecha futura o ajuste el JSON.',
                     variant: 'destructive'
                 });
-                setJsonExpirationDate(undefined); // Invalidate if past
+                setJsonExpirationDate(undefined); 
             }
           } else {
             toast({
@@ -150,7 +150,7 @@ export default function AddMedicinePage() {
     reader.readAsText(file);
   };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const stockNum = initialStock.trim() === '' ? 0 : parseInt(initialStock);
     const currentId = medicineId.trim().toUpperCase();
@@ -175,9 +175,8 @@ export default function AddMedicinePage() {
       return;
     }
     
-    let finalExpirationDate: string | undefined = undefined;
+    let finalExpirationJsDate: Date | undefined = undefined;
     const todayAtMidnight = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-
 
     if (manualExpirationDate) {
         if (manualExpirationDate <= todayAtMidnight) {
@@ -188,7 +187,7 @@ export default function AddMedicinePage() {
             });
             return;
         }
-        finalExpirationDate = formatDate(manualExpirationDate, 'yyyy-MM-dd');
+        finalExpirationJsDate = manualExpirationDate;
     } else if (jsonExpirationDate) {
         const parsedJsonDate = parseISO(jsonExpirationDate);
          if (parsedJsonDate <= todayAtMidnight) {
@@ -199,11 +198,11 @@ export default function AddMedicinePage() {
             });
             return;
         }
-        finalExpirationDate = jsonExpirationDate;
+        finalExpirationJsDate = parsedJsonDate;
     }
 
 
-    if (stockNum > 0 && !finalExpirationDate) {
+    if (stockNum > 0 && !finalExpirationJsDate) {
         toast({
             title: 'Fecha de Expiración Requerida',
             description: 'Si ingresas stock inicial, debes proporcionar una fecha de expiración válida y futura (manual o JSON).',
@@ -212,55 +211,63 @@ export default function AddMedicinePage() {
         return;
     }
 
+    try {
+        const existingMedicine = await getMedicineByIdFromFirestore(currentId);
+        if (existingMedicine) {
+          toast({
+            title: 'ID Duplicado',
+            description: `Ya existe un medicamento con el ID: ${currentId}.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        const newDispensingHistory: DispensingRecord[] = [];
+        if (stockNum > 0 && finalExpirationJsDate) {
+          newDispensingHistory.push({
+            id: `stock_init_${currentId}_${Date.now()}`,
+            date: Timestamp.fromDate(new Date()), 
+            rxNumber: 'STOCK-INICIAL',
+            quantity: stockNum,
+            type: 'stocked',
+            userName: getCurrentUserUsername() || 'admin.admin',
+            expirationDate: Timestamp.fromDate(finalExpirationJsDate),
+          });
+        }
 
-    const medicines = getStoredMedicines();
-    if (medicines.find(med => med.id.toUpperCase() === currentId)) {
-      toast({
-        title: 'ID Duplicado',
-        description: `Ya existe un medicamento con el ID: ${currentId}.`,
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    const newDispensingHistory: DispensingRecord[] = [];
-    if (stockNum > 0) {
-      newDispensingHistory.push({
-        id: `stock_init_${currentId}_${Date.now()}`,
-        date: formatDate(new Date(), 'yyyy-MM-dd'), 
-        rxNumber: 'STOCK-INICIAL',
-        quantity: stockNum,
-        type: 'stocked',
-        userName: getCurrentUserUsername() || 'admin.admin',
-        expirationDate: finalExpirationDate,
-      });
-    }
+        const newMedicine: Medicine = {
+          id: currentId,
+          name: currentName,
+          presentation: currentPresentation,
+          description: '', 
+          currentStock: stockNum,
+          lastUpdated: serverTimestamp() as Timestamp,
+          dispensingHistory: newDispensingHistory,
+        };
 
-    const newMedicine: Medicine = {
-      id: currentId,
-      name: currentName,
-      presentation: currentPresentation,
-      description: '', 
-      currentStock: stockNum,
-      lastUpdated: new Date().toISOString(),
-      dispensingHistory: newDispensingHistory,
-    };
+        await createCompleteMedicineInFirestore(newMedicine);
 
-    saveStoredMedicines([...medicines, newMedicine]);
+        toast({
+          title: 'Medicamento Registrado',
+          description: `${newMedicine.name} (ID: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
+        });
 
-    toast({
-      title: 'Medicamento Registrado',
-      description: `${newMedicine.name} (ID: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
-    });
-
-    setMedicineId('');
-    setMedicineName('');
-    setPresentation('');
-    setInitialStock('');
-    setJsonExpirationDate(undefined);
-    setManualExpirationDate(undefined);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+        setMedicineId('');
+        setMedicineName('');
+        setPresentation('');
+        setInitialStock('');
+        setJsonExpirationDate(undefined);
+        setManualExpirationDate(undefined);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+    } catch (error) {
+        console.error("Error guardando medicamento en Firestore:", error);
+        toast({
+            title: 'Error al Guardar',
+            description: `No se pudo guardar el medicamento. ${error instanceof Error ? error.message : 'Error desconocido.'}`,
+            variant: 'destructive',
+        });
     }
   };
 
@@ -293,7 +300,7 @@ export default function AddMedicinePage() {
               Añadir Medicamento
             </CardTitle>
             <CardDescription>
-              Ingresa los detalles del medicamento o carga un archivo JSON.
+              Ingresa los detalles del medicamento o carga un archivo JSON. El ID del medicamento debe ser único.
             </CardDescription>
             {formattedClientNow && (
                  <Alert variant="default" className="mt-4 text-sm bg-accent/10 border-accent/30">
@@ -328,17 +335,17 @@ export default function AddMedicinePage() {
                 />
               </div>
                <p className="text-xs text-muted-foreground">
-                El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD).
+                El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD). El ID debe ser único.
               </p>
             </div>
             <Separator className="my-6" />
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="medicineId">ID del Medicamento</Label>
+                <Label htmlFor="medicineId">ID del Medicamento (Único)</Label>
                 <Input
                   id="medicineId"
                   type="text"
-                  placeholder="Ej: A0205"
+                  placeholder="Ej: A0205 (será convertido a mayúsculas)"
                   value={medicineId}
                   onChange={(e) => setMedicineId(e.target.value)}
                   required
@@ -406,14 +413,14 @@ export default function AddMedicinePage() {
                         initialFocus
                         locale={es}
                         disabled={(date) => {
-                            const todayAtMidnight = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                            return date <= todayAtMidnight;
+                            const todayAtMidnightCal = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                            return date <= todayAtMidnightCal;
                         }}
                         />
                     </PopoverContent>
                 </Popover>
                 <p className="text-xs text-muted-foreground">
-                  Requerida si ingresas stock inicial. La fecha del JSON (si existe) se usa si este campo está vacío. Debe ser futura.
+                  Requerida si ingresas stock inicial. La fecha del JSON (si existe y es válida) se usa si este campo está vacío. Debe ser futura.
                 </p>
               </div>
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -427,5 +434,6 @@ export default function AddMedicinePage() {
     </AuthWrapper>
   );
 }
+    
 
     

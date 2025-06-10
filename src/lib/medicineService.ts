@@ -14,18 +14,18 @@ import {
   serverTimestamp,
   query,
   where,
-  increment,
+  // increment, // Not used currently, can be removed if not planned
   runTransaction
 } from 'firebase/firestore';
 
 export interface DispensingRecord {
   id: string;
-  date: Timestamp; // Changed to Timestamp
+  date: Timestamp; 
   rxNumber: string;
   quantity: number;
   type: 'dispensed' | 'stocked';
   userName?: string;
-  expirationDate?: Timestamp; // Changed to Timestamp
+  expirationDate?: Timestamp; 
 }
 
 export interface Medicine {
@@ -34,18 +34,17 @@ export interface Medicine {
   presentation: string;
   description?: string;
   currentStock: number;
-  lastUpdated: Timestamp; // Changed to Timestamp
+  lastUpdated: Timestamp; 
   dispensingHistory: DispensingRecord[];
 }
 
-// Adapted from placeholder-data.ts for Firestore
-export const mockMedicinesForFirestore: Omit<Medicine, 'lastUpdated' | 'dispensingHistory'> & { dispensingHistory: Omit<DispensingRecord, 'date' | 'expirationDate'> & { date: string, expirationDate?: string}[] }[] = [
+export const mockMedicinesForFirestore: Omit<Medicine, 'lastUpdated' | 'dispensingHistory'> & { dispensingHistory: Omit<DispensingRecord, 'date' | 'expirationDate' | 'id'> & { id?: string, date: string, expirationDate?: string}[] }[] = [
   {
     id: 'MED001',
     name: 'Amoxicillin 250mg Capsules',
     presentation: 'Capsules',
     description: 'Broad-spectrum antibiotic',
-    currentStock: 0, // Initial stock will be set by the first 'stocked' record
+    currentStock: 0, 
     dispensingHistory: [
       { id: 'hist000_init_MED001', date: '2024-07-20', rxNumber: 'alm765', quantity: 100, type: 'stocked', userName: 'laura.perez', expirationDate: '2025-12-31' },
     ],
@@ -67,7 +66,7 @@ export const mockMedicinesForFirestore: Omit<Medicine, 'lastUpdated' | 'dispensi
     description: 'ACE inhibitor for hypertension',
     currentStock: 0,
     dispensingHistory: [
-       { id: 'hist007', date: '2024-07-20', rxNumber: 'alm003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
+       { id: 'hist007_init_MED003', date: '2024-07-20', rxNumber: 'alm003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
     ],
   },
     {
@@ -97,12 +96,13 @@ export async function initializeDefaultMedicines(): Promise<void> {
         const medDocRef = doc(medicinesRef, medMock.id);
         
         let initialStock = 0;
-        const historyForFirestore: DispensingRecord[] = medMock.dispensingHistory.map(h => {
+        const historyForFirestore: DispensingRecord[] = medMock.dispensingHistory.map((h, index) => {
           if (h.type === 'stocked') initialStock += h.quantity;
           else if (h.type === 'dispensed') initialStock -= h.quantity;
 
           return {
             ...h,
+            id: h.id || `hist_init_${medMock.id}_${index}_${Date.now()}`, // Ensure ID for history
             date: Timestamp.fromDate(new Date(h.date)),
             expirationDate: h.expirationDate ? Timestamp.fromDate(new Date(h.expirationDate)) : undefined,
           };
@@ -113,7 +113,7 @@ export async function initializeDefaultMedicines(): Promise<void> {
           name: medMock.name,
           presentation: medMock.presentation,
           description: medMock.description || '',
-          currentStock: initialStock, // Calculated from history
+          currentStock: initialStock, 
           lastUpdated: serverTimestamp() as Timestamp,
           dispensingHistory: historyForFirestore,
         };
@@ -124,7 +124,6 @@ export async function initializeDefaultMedicines(): Promise<void> {
     }
   } catch (error) {
     console.error('Error initializing default medicines in Firestore:', error);
-    // Consider throwing the error or notifying the user
   }
 }
 
@@ -132,58 +131,30 @@ export async function getMedicinesFromFirestore(): Promise<Medicine[]> {
   if (!db) throw new Error("Firestore not initialized");
   const medicinesCol = collection(db, 'medicines');
   const snapshot = await getDocs(medicinesCol);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medicine));
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Medicine));
 }
 
 export async function getMedicineByIdFromFirestore(id: string): Promise<Medicine | null> {
   if (!db) throw new Error("Firestore not initialized");
+  if (!id) return null; // Prevent querying with empty ID
   const medDocRef = doc(db, 'medicines', id);
   const docSnap = await getDoc(medDocRef);
   if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as Medicine;
+    return { ...docSnap.data(), id: docSnap.id } as Medicine;
   }
   return null;
 }
 
-export async function addMedicineToFirestore(medicine: Omit<Medicine, 'id' | 'lastUpdated' | 'currentStock' | 'dispensingHistory'>, initialStock: number, expirationDate?: Date, userName?: string): Promise<string> {
-  if (!db) throw new Error("Firestore not initialized");
-  
-  const medicineId = medicine.name.trim().toUpperCase().replace(/\s+/g, '_').slice(0,10) + "_" + Date.now().toString().slice(-5);
-
-  const existingMedicineQuery = query(collection(db, 'medicines'), where('name', '==', medicine.name.trim()));
-  const querySnapshot = await getDocs(existingMedicineQuery);
-  if (!querySnapshot.empty) {
-    throw new Error(`Ya existe un medicamento con el nombre: ${medicine.name.trim()}`);
+// Function to save a fully constructed Medicine object, used by AddMedicinePage
+export async function createCompleteMedicineInFirestore(medicineData: Medicine): Promise<void> {
+  if (!db) {
+    throw new Error("Firestore not initialized. Cannot save medicine.");
   }
-  
-  const dispensingHistory: DispensingRecord[] = [];
-  if (initialStock > 0) {
-    if (!expirationDate) {
-      throw new Error("La fecha de expiración es requerida si se ingresa stock inicial.");
-    }
-    dispensingHistory.push({
-      id: `stock_init_${medicineId}_${Date.now()}`,
-      date: Timestamp.now(),
-      rxNumber: 'STOCK-INICIAL',
-      quantity: initialStock,
-      type: 'stocked',
-      userName: userName || 'admin.admin',
-      expirationDate: Timestamp.fromDate(expirationDate),
-    });
+  if (!medicineData || !medicineData.id) {
+    throw new Error("Invalid medicine data or ID missing for saving to Firestore.");
   }
-
-  const newMedicineData: Medicine = {
-    id: medicineId, // The document ID will also be this
-    name: medicine.name.trim(),
-    presentation: medicine.presentation.trim(),
-    description: medicine.description?.trim() || '',
-    currentStock: initialStock,
-    lastUpdated: serverTimestamp() as Timestamp,
-    dispensingHistory: dispensingHistory,
-  };
-
-  await setDoc(doc(db, 'medicines', medicineId), newMedicineData);
-  return medicineId;
+  const medDocRef = doc(db, 'medicines', medicineData.id);
+  await setDoc(medDocRef, medicineData);
 }
 
 
@@ -193,7 +164,8 @@ export async function updateMedicineStockInFirestore(
   transactionType: 'dispensed' | 'stocked',
   rxNumber: string,
   userName: string,
-  expirationDateForStock?: Timestamp // Only for 'stocked' type
+  transactionDate: Timestamp, // Added transactionDate parameter
+  expirationDateForStock?: Timestamp 
 ): Promise<void> {
   if (!db) throw new Error("Firestore not initialized");
   const medDocRef = doc(db, 'medicines', medicineId);
@@ -222,12 +194,12 @@ export async function updateMedicineStockInFirestore(
 
       const newRecord: DispensingRecord = {
         id: `${transactionType}_${medicineId}_${Date.now()}`,
-        date: Timestamp.now(),
+        date: transactionDate, // Use provided transactionDate
         rxNumber,
         quantity: quantityChange,
         type: transactionType,
         userName,
-        expirationDate: transactionType === 'stocked' ? expirationDateForStock : medicineData.dispensingHistory.find(h => h.type === 'stocked' && h.expirationDate)?.expirationDate, // A simplification for dispensed items
+        expirationDate: transactionType === 'stocked' ? expirationDateForStock : undefined, // For dispensed, exp date is on the lot, not this record itself. Store on stock entries.
       };
       
       transaction.update(medDocRef, {
@@ -238,7 +210,7 @@ export async function updateMedicineStockInFirestore(
     });
   } catch (error) {
     console.error("Error updating medicine stock in transaction:", error);
-    throw error; // Re-throw to be caught by caller
+    throw error; 
   }
 }
 
@@ -247,3 +219,45 @@ export async function deleteMedicineFromFirestore(medicineId: string): Promise<v
   const medDocRef = doc(db, 'medicines', medicineId);
   await deleteDoc(medDocRef);
 }
+
+// This function is DEPRECATED as AddMedicinePage now uses createCompleteMedicineInFirestore
+// export async function addMedicineToFirestore(medicine: Omit<Medicine, 'id' | 'lastUpdated' | 'currentStock' | 'dispensingHistory'>, initialStock: number, expirationDate?: Date, userName?: string): Promise<string> {
+//   if (!db) throw new Error("Firestore not initialized");
+  
+//   const medicineId = medicine.name.trim().toUpperCase().replace(/\s+/g, '_').slice(0,10) + "_" + Date.now().toString().slice(-5);
+
+//   const existingMedicineQuery = query(collection(db, 'medicines'), where('name', '==', medicine.name.trim()));
+//   const querySnapshot = await getDocs(existingMedicineQuery);
+//   if (!querySnapshot.empty) {
+//     throw new Error(`Ya existe un medicamento con el nombre: ${medicine.name.trim()}`);
+//   }
+  
+//   const dispensingHistory: DispensingRecord[] = [];
+//   if (initialStock > 0) {
+//     if (!expirationDate) {
+//       throw new Error("La fecha de expiración es requerida si se ingresa stock inicial.");
+//     }
+//     dispensingHistory.push({
+//       id: `stock_init_${medicineId}_${Date.now()}`,
+//       date: Timestamp.now(),
+//       rxNumber: 'STOCK-INICIAL',
+//       quantity: initialStock,
+//       type: 'stocked',
+//       userName: userName || 'admin.admin',
+//       expirationDate: Timestamp.fromDate(expirationDate),
+//     });
+//   }
+
+//   const newMedicineData: Medicine = {
+//     id: medicineId,
+//     name: medicine.name.trim(),
+//     presentation: medicine.presentation.trim(),
+//     description: medicine.description?.trim() || '',
+//     currentStock: initialStock,
+//     lastUpdated: serverTimestamp() as Timestamp,
+//     dispensingHistory: dispensingHistory,
+//   };
+
+//   await setDoc(doc(db, 'medicines', medicineId), newMedicineData);
+//   return medicineId;
+// }
