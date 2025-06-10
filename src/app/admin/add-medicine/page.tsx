@@ -12,13 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-
-interface NewMedicineData {
-  id: string;
-  name: string;
-  presentation: string;
-  initialStock: number;
-}
+import { getStoredMedicines, saveStoredMedicines, type Medicine, type DispensingRecord } from '@/lib/placeholder-data';
 
 interface MedicineJsonFormat {
   id?: string;
@@ -28,7 +22,7 @@ interface MedicineJsonFormat {
 }
 
 export default function AddMedicinePage() {
-  const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
+  const { isCurrentUserAdmin, isLoading: authLoading, getCurrentUserUsername } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -61,7 +55,7 @@ export default function AddMedicinePage() {
         description: 'Por favor, selecciona un archivo JSON.',
         variant: 'destructive',
       });
-      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -100,7 +94,7 @@ export default function AddMedicinePage() {
           variant: 'destructive',
         });
       } finally {
-        if (fileInputRef.current) fileInputRef.current.value = ''; // Reset file input
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
     reader.onerror = () => {
@@ -109,16 +103,19 @@ export default function AddMedicinePage() {
         description: 'No se pudo leer el archivo seleccionado.',
         variant: 'destructive',
       });
-      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
     };
     reader.readAsText(file);
   };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const stockNum = parseInt(initialStock);
+    const stockNum = initialStock.trim() === '' ? 0 : parseInt(initialStock);
+    const currentId = medicineId.trim().toUpperCase();
+    const currentName = medicineName.trim();
+    const currentPresentation = presentation.trim();
 
-    if (!medicineId.trim() || !medicineName.trim() || !presentation.trim()) {
+    if (!currentId || !currentName || !currentPresentation) {
       toast({
         title: 'Campos Incompletos',
         description: 'ID, Nombre y Presentación son requeridos.',
@@ -136,17 +133,44 @@ export default function AddMedicinePage() {
       return;
     }
 
-    const newMedicine: NewMedicineData = {
-      id: medicineId.trim().toUpperCase(),
-      name: medicineName.trim(),
-      presentation: presentation.trim(),
-      initialStock: initialStock.trim() === '' ? 0 : stockNum,
+    const medicines = getStoredMedicines();
+    if (medicines.find(med => med.id.toUpperCase() === currentId)) {
+      toast({
+        title: 'ID Duplicado',
+        description: `Ya existe un medicamento con el ID: ${currentId}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newDispensingHistory: DispensingRecord[] = [];
+    if (stockNum > 0) {
+      newDispensingHistory.push({
+        id: `stock_init_${currentId}_${Date.now()}`,
+        date: new Date().toISOString().split('T')[0],
+        rxNumber: 'STOCK-INICIAL',
+        quantity: stockNum,
+        type: 'stocked',
+        userName: getCurrentUserUsername() || 'admin.admin', // Default to admin if not available
+        expirationDate: undefined, 
+      });
+    }
+
+    const newMedicine: Medicine = {
+      id: currentId,
+      name: currentName,
+      presentation: currentPresentation,
+      description: '', // Default empty description
+      currentStock: stockNum,
+      lastUpdated: new Date().toISOString(),
+      dispensingHistory: newDispensingHistory,
     };
 
-    console.log('Nuevo Medicamento:', newMedicine);
+    saveStoredMedicines([...medicines, newMedicine]);
+
     toast({
-      title: 'Medicamento Registrado (Simulado)',
-      description: `${newMedicine.name} (ID: ${newMedicine.id}) con stock inicial ${newMedicine.initialStock}.`,
+      title: 'Medicamento Registrado',
+      description: `${newMedicine.name} (ID: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
     });
 
     // Reset form

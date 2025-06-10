@@ -12,11 +12,14 @@ export interface DispensingRecord {
 export interface Medicine {
   id: string;
   name: string;
+  presentation: string;
   description?: string;
   currentStock: number;
   lastUpdated: string;
   dispensingHistory: DispensingRecord[];
 }
+
+export const MEDICINES_LOCAL_STORAGE_KEY = 'bindguard_medicines_v1';
 
 // Note: For dispensed items, expirationDate is manually set to simulate FEFO for display.
 // In a real system, this would be derived from lot management.
@@ -24,9 +27,10 @@ export const mockMedicines: Medicine[] = [
   {
     id: 'MED001',
     name: 'Amoxicillin 250mg Capsules',
+    presentation: 'Capsules',
     description: 'Broad-spectrum antibiotic',
     currentStock: 2000,
-    lastUpdated: '2024-08-05',
+    lastUpdated: '2024-08-05T10:00:00Z',
     dispensingHistory: [
       { id: 'hist000_init_MED001', date: '2024-07-20', rxNumber: 'alm765', quantity: 100, type: 'stocked', userName: 'laura.perez', expirationDate: '2025-12-31' },
       { id: 'hist003', date: '2024-07-22', rxNumber: '43320911', quantity: 50, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-12-31' },
@@ -43,9 +47,10 @@ export const mockMedicines: Medicine[] = [
   {
     id: 'MED002',
     name: 'Paracetamol 500mg Tablets',
+    presentation: 'Tablets',
     description: 'Analgesic and antipyretic',
-    currentStock: 1500, // Corrected from 1700
-    lastUpdated: '2024-08-06',
+    currentStock: 1500,
+    lastUpdated: '2024-08-06T11:00:00Z',
     dispensingHistory: [
       { id: 'hist000_init_MED002', date: '2024-07-24', rxNumber: 'alm123', quantity: 200, type: 'stocked', userName: 'juan.diaz', expirationDate: '2025-10-31' },
       { id: 'hist005', date: '2024-07-26', rxNumber: 'alm876', quantity: 100, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2026-08-31' },
@@ -62,35 +67,71 @@ export const mockMedicines: Medicine[] = [
   {
     id: 'MED003',
     name: 'Lisinopril 10mg Tablets',
+    presentation: 'Tablets',
     description: 'ACE inhibitor for hypertension',
     currentStock: 75,
-    lastUpdated: '2024-07-29',
+    lastUpdated: '2024-07-29T14:00:00Z',
     dispensingHistory: [
       { id: 'hist007', date: '2024-07-20', rxNumber: 'alm003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
-      { id: 'hist006', date: '2024-07-29', rxNumber: '555666', quantity: 25, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-07-31' },
+      { id: 'hist006', date: '2024-07-29', rxNumber: '55566677', quantity: 25, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-07-31' },
     ],
   },
   {
     id: 'MED004',
     name: 'Salbutamol Inhaler 100mcg',
+    presentation: 'Inhaler',
     description: 'Bronchodilator for asthma',
     currentStock: 40,
-    lastUpdated: '2024-07-28',
+    lastUpdated: '2024-07-28T09:30:00Z',
     dispensingHistory: [
         { id: 'hist010', date: '2024-07-25', rxNumber: 'alm445', quantity: 50, type: 'stocked', userName: 'laura.perez', expirationDate: '2026-01-31' },
-        { id: 'hist009', date: '2024-07-27', rxNumber: '112200', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' },
+        { id: 'hist009', date: '2024-07-27', rxNumber: '11220033', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' },
         { id: 'hist008', date: '2024-07-28', rxNumber: '33440011', quantity: 5, type: 'dispensed', userName: 'martin.lopez', expirationDate: '2026-01-31' },
     ]
   },
   {
     id: 'MED005',
     name: 'Omeprazole 20mg Capsules',
+    presentation: 'Capsules',
     description: 'Proton pump inhibitor',
     currentStock: 8,
-    lastUpdated: '2024-07-30',
+    lastUpdated: '2024-07-30T16:15:00Z',
     dispensingHistory: [
         { id: 'hist012', date: '2024-07-28', rxNumber: 'alm990', quantity: 18, type: 'stocked', userName: 'sofia.vargas', expirationDate: '2025-05-31'},
-        { id: 'hist011', date: '2024-07-30', rxNumber: '998877', quantity: 10, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-05-31' },
+        { id: 'hist011', date: '2024-07-30', rxNumber: '99887766', quantity: 10, type: 'dispensed', userName: 'carlos.gomez', expirationDate: '2025-05-31' },
     ]
   }
 ];
+
+export function getStoredMedicines(): Medicine[] {
+  try {
+    const storedMedicines = localStorage.getItem(MEDICINES_LOCAL_STORAGE_KEY);
+    if (storedMedicines) {
+      const parsed = JSON.parse(storedMedicines) as Medicine[];
+      // Basic validation to ensure it's an array
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+    // If no stored medicines or parsing failed/not an array, initialize with mockMedicines
+    localStorage.setItem(MEDICINES_LOCAL_STORAGE_KEY, JSON.stringify(mockMedicines));
+    return mockMedicines;
+  } catch (error) {
+    console.error("Error reading medicines from localStorage:", error);
+    // Fallback to mockMedicines and attempt to re-initialize localStorage
+    try {
+      localStorage.setItem(MEDICINES_LOCAL_STORAGE_KEY, JSON.stringify(mockMedicines));
+    } catch (initError) {
+      console.error("Failed to re-initialize medicines in localStorage:", initError);
+    }
+    return mockMedicines;
+  }
+}
+
+export function saveStoredMedicines(medicines: Medicine[]): void {
+  try {
+    localStorage.setItem(MEDICINES_LOCAL_STORAGE_KEY, JSON.stringify(medicines));
+  } catch (error) {
+    console.error("Error saving medicines to localStorage:", error);
+  }
+}
