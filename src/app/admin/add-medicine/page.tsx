@@ -13,12 +13,15 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getStoredMedicines, saveStoredMedicines, type Medicine, type DispensingRecord } from '@/lib/placeholder-data';
+import { parseISO, isValid } from 'date-fns';
+
 
 interface MedicineJsonFormat {
   id?: string;
   name?: string;
   presentation?: string;
   initialStock?: number | string;
+  expirationDate?: string; // Expects YYYY-MM-DD
 }
 
 export default function AddMedicinePage() {
@@ -30,6 +33,7 @@ export default function AddMedicinePage() {
   const [medicineName, setMedicineName] = useState('');
   const [presentation, setPresentation] = useState('');
   const [initialStock, setInitialStock] = useState('');
+  const [jsonExpirationDate, setJsonExpirationDate] = useState<string | undefined>(undefined); // For storing expiration from JSON
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -81,6 +85,23 @@ export default function AddMedicinePage() {
         setMedicineName(jsonData.name || '');
         setPresentation(jsonData.presentation || '');
         setInitialStock(stockValue);
+        
+        if (jsonData.expirationDate) {
+          const parsedDate = parseISO(jsonData.expirationDate);
+          if (isValid(parsedDate)) {
+            setJsonExpirationDate(jsonData.expirationDate);
+          } else {
+            toast({
+              title: 'Fecha de Expiración Inválida en JSON',
+              description: 'El formato de expirationDate debe ser YYYY-MM-DD. Se ignorará este campo.',
+              variant: 'destructive',
+            });
+            setJsonExpirationDate(undefined);
+          }
+        } else {
+          setJsonExpirationDate(undefined);
+        }
+
 
         toast({
           title: 'JSON Cargado',
@@ -151,8 +172,8 @@ export default function AddMedicinePage() {
         rxNumber: 'STOCK-INICIAL',
         quantity: stockNum,
         type: 'stocked',
-        userName: getCurrentUserUsername() || 'admin.admin', // Default to admin if not available
-        expirationDate: undefined, 
+        userName: getCurrentUserUsername() || 'admin.admin',
+        expirationDate: jsonExpirationDate, // Use expiration date from JSON if available
       });
     }
 
@@ -178,6 +199,7 @@ export default function AddMedicinePage() {
     setMedicineName('');
     setPresentation('');
     setInitialStock('');
+    setJsonExpirationDate(undefined);
   };
 
 
@@ -235,7 +257,7 @@ export default function AddMedicinePage() {
                 />
               </div>
                <p className="text-xs text-muted-foreground">
-                El JSON debe tener los campos: `id` (string), `name` (string), `presentation` (string), `initialStock` (number/string).
+                El JSON debe tener los campos: `id` (string), `name` (string), `presentation` (string), `initialStock` (number/string), y opcionalmente `expirationDate` (string, formato YYYY-MM-DD).
               </p>
             </div>
             <Separator className="my-6" />

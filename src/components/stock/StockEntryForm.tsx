@@ -27,7 +27,7 @@ export default function StockEntryForm() {
   const [clientNow, setClientNow] = useState<Date | null>(null);
 
   const { toast } = useToast();
-  const { getCurrentUser } = useAuth();
+  const { getCurrentUserUsername } = useAuth(); // Changed from getCurrentUser
 
   const [isScanningQR, setIsScanningQR] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -122,7 +122,7 @@ export default function StockEntryForm() {
     }
 
 
-    const currentUser = getCurrentUser();
+    const currentUsername = getCurrentUserUsername(); // Use new method
     // Simulate data logging
     console.log('Simulating stock entry:', {
       date: transactionDate.toISOString().split('T')[0],
@@ -131,7 +131,7 @@ export default function StockEntryForm() {
       medicineDetails: medicineDetails,
       expirationDate: expirationDate.toISOString().split('T')[0],
       type: 'stocked',
-      userName: currentUser || 'System',
+      userName: currentUsername || 'System', // Use username from auth
     });
 
     toast({
