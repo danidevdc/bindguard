@@ -17,12 +17,13 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { getStoredMedicines, type Medicine } from '@/lib/placeholder-data'; // Import getStoredMedicines
+import { getStoredMedicines, type Medicine } from '@/lib/placeholder-data';
+import QrScanner from 'qr-scanner';
 
 interface MedicineForPrescription {
-  id: string; // Unique ID for the entry in the list
+  id: string; 
   name: string;
-  code: string; // This will be the actual Medicine ID from database/localStorage
+  code: string; 
   quantity: number;
 }
 
@@ -43,9 +44,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [prescriptionNumber, setPrescriptionNumber] = useState('');
   const [recipeDate, setRecipeDate] = useState<Date | undefined>(undefined);
 
-  const [currentScannedCode, setCurrentScannedCode] = useState(''); // Holds the ID to verify
-  const [identifiedMedicineName, setIdentifiedMedicineName] = useState(''); // Name of VERIFIED medicine
-  const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState(''); // ID of VERIFIED medicine
+  const [currentScannedCode, setCurrentScannedCode] = useState(''); 
+  const [identifiedMedicineName, setIdentifiedMedicineName] = useState(''); 
+  const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState(''); 
 
   const [currentQuantity, setCurrentQuantity] = useState('');
   const [medicinesInPrescription, setMedicinesInPrescription] = useState<MedicineForPrescription[]>([]);
@@ -59,6 +60,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const qrScannerRef = useRef<QrScanner | null>(null);
+
 
   useEffect(() => {
     const today = new Date();
@@ -66,8 +69,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (!recipeDate && step === "identifyMedicine") {
       setRecipeDate(today);
     }
-    // Initialize AudioContext on user interaction (e.g., when component mounts or a button is clicked)
-    // This is often required by browsers to allow audio playback.
     if (!audioContextRef.current) {
         try {
             audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -86,51 +87,173 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     gainNode.connect(audioContextRef.current.destination);
 
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); // A4 note
-    gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime); // Adjust volume
+    oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); 
+    gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime); 
 
     oscillator.start();
-    oscillator.stop(audioContextRef.current.currentTime + 0.1); // Beep duration 100ms
+    oscillator.stop(audioContextRef.current.currentTime + 0.1); 
+  };
+  
+  const handleQrScanSuccess = (result: QrScanner.ScanResult) => {
+    const scannedData = result.data;
+    console.log('QR Scanned Data:', scannedData);
+    playBeep();
+    setIsScanningQR(false); // This will trigger the useEffect cleanup
+
+    let codeFromQR = '';
+    let medicineNameFromQR = '';
+
+    try {
+        const parsedData = JSON.parse(scannedData);
+        if (parsedData && typeof parsedData.id === 'string') {
+            codeFromQR = parsedData.id;
+            if (typeof parsedData.nombre === 'string') {
+                medicineNameFromQR = parsedData.nombre;
+            }
+        } else {
+            codeFromQR = scannedData;
+        }
+    } catch (e) {
+        codeFromQR = scannedData;
+        console.warn('QR data is not a JSON or does not have an id field. Treating as raw ID.', e);
+    }
+
+    if (codeFromQR) {
+        setCurrentScannedCode(codeFromQR);
+        toast({
+            title: "QR Detectado",
+            description: medicineNameFromQR 
+                         ? `Medicamento: ${medicineNameFromQR} (Código: ${codeFromQR}). Verifica y continúa.`
+                         : `Código: ${codeFromQR}. Verifica y continúa.`
+        });
+    } else {
+        toast({
+            title: "QR Inválido",
+            description: "No se pudo extraer un código del QR escaneado.",
+            variant: "destructive",
+        });
+    }
+  };
+
+  const handleQrScanError = (error: Error | string) => {
+    console.error('QR Scan Error:', error);
+     if (typeof error === 'object' && error !== null && 'message' in error) {
+        if ((error as Error).message === 'No QR code found') {
+            // console.log('No QR code found in this frame.');
+            return; // Don't toast for "no QR code found"
+        }
+    } else if (typeof error === 'string' && error === 'No QR code found') {
+        // console.log('No QR code found in this frame.');
+        return; 
+    }
+    
+    toast({
+        title: "Error de Escaneo QR",
+        description: typeof error === 'string' ? error : (error as Error).message,
+        variant: "destructive",
+    });
   };
 
   useEffect(() => {
     if (isScanningQR) {
-      const getCameraPermission = async () => {
+      const startScanner = async () => {
+        if (!videoRef.current) {
+          console.log("Video ref not available yet");
+          return;
+        }
+
+        if (qrScannerRef.current) {
+            console.log("Stopping existing scanner instance.");
+            qrScannerRef.current.stop();
+            qrScannerRef.current.destroy();
+            qrScannerRef.current = null;
+        }
+
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
           setHasCameraPermission(true);
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-        } catch (error) {
-          console.error('Error accessing environment camera:', error);
-          try { // Fallback to any camera
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(e => console.error("Video play failed:", e));
+
+          console.log("Initializing QrScanner with environment camera.");
+          qrScannerRef.current = new QrScanner(
+            videoRef.current,
+            handleQrScanSuccess,
+            {
+              onDecodeError: handleQrScanError,
+              preferredCamera: "environment",
+              highlightScanRegion: true,
+              highlightCodeOutline: true,
+            }
+          );
+          await qrScannerRef.current.start();
+          console.log("QrScanner started with environment camera.");
+        } catch (error: any) {
+          console.error('Error accessing environment camera or starting scanner:', error);
+          try { 
+            console.log("Attempting fallback to user-facing camera.");
+            let fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
             if (videoRef.current) {
-              videoRef.current.srcObject = stream;
+                videoRef.current.srcObject = fallbackStream;
+                await videoRef.current.play().catch(e => console.error("Fallback video play failed:", e));
+                
+                console.log("Initializing QrScanner with fallback camera.");
+                qrScannerRef.current = new QrScanner(
+                    videoRef.current,
+                    handleQrScanSuccess,
+                    {
+                        onDecodeError: handleQrScanError,
+                        preferredCamera: "user",
+                        highlightScanRegion: true,
+                        highlightCodeOutline: true,
+                    }
+                );
+                await qrScannerRef.current.start();
+                console.log("QrScanner started with fallback camera.");
             }
-          } catch (fallbackError) {
-             console.error('Error accessing any camera:', fallbackError);
-            setHasCameraPermission(false);
-            toast({
-              variant: 'destructive',
-              title: 'Acceso a Cámara Denegado',
-              description: 'Por favor, habilita los permisos de cámara en tu navegador para escanear.',
-            });
-            setIsScanningQR(false);
+          } catch (fallbackError: any) {
+             console.error('Fallback camera access error:', fallbackError);
+             setHasCameraPermission(false);
+             toast({
+                variant: 'destructive',
+                title: 'Acceso a Cámara Denegado',
+                description: 'Por favor, habilita los permisos de cámara para escanear.',
+             });
+             setIsScanningQR(false); 
           }
         }
       };
-      getCameraPermission();
+      startScanner();
     } else {
+      if (qrScannerRef.current) {
+        console.log("Stopping and destroying QrScanner instance.");
+        qrScannerRef.current.stop();
+        qrScannerRef.current.destroy();
+        qrScannerRef.current = null;
+      }
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
+        console.log("Video stream stopped and cleared.");
       }
     }
-  }, [isScanningQR, toast]);
+
+    return () => { 
+      if (qrScannerRef.current) {
+        console.log("Cleaning up QrScanner instance on unmount/effect change.");
+        qrScannerRef.current.destroy(); // Use destroy for full cleanup
+        qrScannerRef.current = null;
+      }
+       if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [isScanningQR]);
+
 
   useImperativeHandle(ref, () => ({
     navigateBackStep: () => {
@@ -219,12 +342,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setHasCameraPermission(null);
-    } else { 
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-            videoRef.current.srcObject = null;
-        }
     }
   };
 
@@ -237,8 +354,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
     const randomMedicine = allUserMedicines[Math.floor(Math.random() * allUserMedicines.length)];
     
-    // Simulate QR containing the ID directly or a JSON string with an 'id' field
-    const qrDataContent = randomMedicine.id; // Assuming QR directly contains the ID for simplicity here
+    const qrDataContent = randomMedicine.id; 
 
     if (qrDataContent) {
         const foundMedicine = allUserMedicines.find(med => med.id.toUpperCase() === qrDataContent.toUpperCase());
@@ -246,11 +362,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             playBeep();
             setCurrentScannedCode(foundMedicine.id); 
             setIsScanningQR(false); 
-            setIdentifiedMedicineName(''); // Clear this, will be set by verifyAndPrepareMedicine
-            setIdentifiedMedicineCode(''); // Clear this
-            toast({ title: "QR Detectado", description: `${foundMedicine.name}. Verifica y continúa.`});
+            setIdentifiedMedicineName(''); 
+            setIdentifiedMedicineCode(''); 
+            toast({ title: "QR Detectado (Simulado)", description: `${foundMedicine.name}. Verifica y continúa.`});
         } else {
-            // This case should not happen if we pick from existing medicines, but as a safeguard
             toast({ title: "Error de Simulación", description: "Medicamento simulado no encontrado.", variant: "destructive"});
             setIsScanningQR(false);
         }
@@ -455,17 +570,20 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                   <Alert variant="destructive" className="mt-2">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Acceso a Cámara Denegado</AlertTitle>
+                     <AlertDescription>Habilita los permisos de cámara para escanear.</AlertDescription>
                   </Alert>
                 )}
                  {hasCameraPermission === true && !currentScannedCode && (
                     <p className="text-sm text-muted-foreground mt-2 text-center">Apuntando cámara a un código QR...</p>
                 )}
-                <Button type="button" variant="secondary" onClick={handleSimulateScanForIdentification} className="w-full mt-2">
-                    Simular Escaneo (Medicamento Existente)
-                </Button>
               </div>
             )}
           </div>
+          
+          <Button type="button" variant="secondary" onClick={handleSimulateScanForIdentification} className="w-full mt-2">
+                Simular Escaneo (Medicamento Existente)
+          </Button>
+
 
           <div className="relative flex items-center">
             <span className="flex-shrink px-3 text-muted-foreground">O</span>
@@ -646,3 +764,4 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
+
