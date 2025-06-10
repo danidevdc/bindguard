@@ -22,7 +22,7 @@ const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDoma
 const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
 
 if (missingKeys.length > 0) {
-  console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file.`);
+  console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file and ensure all NEXT_PUBLIC_FIREBASE_ variables are set.`);
   // If critical keys are missing, app and db will remain undefined.
 } else {
   if (!getApps().length) {
@@ -47,7 +47,7 @@ if (missingKeys.length > 0) {
       // db will remain undefined if Firestore initialization fails
     }
   } else {
-    console.error("Firebase app is not available, Firestore instance cannot be obtained.");
+    console.error("Firebase app is not available, Firestore instance cannot be obtained. This usually means the Firebase config in .env.local is missing or incorrect.");
   }
 }
 

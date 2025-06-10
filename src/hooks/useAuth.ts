@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
+import { db } from '@/lib/firebase'; // Corrected import
 import {
   collection,
   getDocs,
@@ -24,12 +24,12 @@ const RXLOCAL_CURRENT_USER_USERNAME_KEY = 'rxlocal_currentUser_username_v3';
 
 export interface UserData {
   username: string;
-  password?: string;
+  password?: string; // Storing passwords in Firestore directly is not secure for production. Use Firebase Auth or hash passwords.
   firstName: string;
   lastName: string;
   isAdmin?: boolean;
   createdAt?: Timestamp;
-  firestoreId?: string;
+  firestoreId?: string; // Document ID from Firestore
 }
 
 export function useAuth() {
@@ -43,7 +43,7 @@ export function useAuth() {
   const fetchUserDetails = useCallback(async (username: string): Promise<UserData | null> => {
     if (!db) {
       console.error("Firestore instance (db) is not available for fetching user details.");
-      toast({ title: 'Error de Configuración', description: 'La base de datos no está inicializada.', variant: 'destructive' });
+      // toast({ title: 'Error de Configuración', description: 'La base de datos no está inicializada.', variant: 'destructive' });
       return null;
     }
     try {
@@ -65,6 +65,13 @@ export function useAuth() {
   const initializeDefaultAdminAndData = useCallback(async () => {
     if (!db) {
       console.error("Firestore instance (db) is not available for admin/data initialization.");
+      toast({
+        title: 'Error Crítico de Configuración',
+        description: 'La conexión con la base de datos (Firestore) no se pudo establecer. Verifica la configuración de Firebase en .env.local y las reglas de seguridad.',
+        variant: 'destructive',
+        duration: 10000 // Show longer
+      });
+      setIsLoading(false);
       return;
     }
     try {
@@ -76,18 +83,19 @@ export function useAuth() {
       if (adminSnapshot.empty) {
         const adminUser: Omit<UserData, 'firestoreId'> = {
           username: 'admin.admin',
-          password: 'admin123',
+          password: 'admin123', // Storing passwords in Firestore directly is not secure for production.
           firstName: 'Admin',
           lastName: 'BindGuard',
           isAdmin: true,
           createdAt: serverTimestamp() as Timestamp,
         };
+        // Use the username as the document ID for simplicity in this custom auth system
         await setDoc(doc(usersRef, 'admin.admin'), adminUser);
         console.log('Default admin user "admin.admin" created in Firestore.');
       }
 
-      // Initialize Default Medicines
-      await initializeDefaultMedicines();
+      // Initialize Default Medicines (from medicineService)
+      await initializeDefaultMedicines(); // This function now checks if db is available
 
     } catch (error) {
       console.error('Error initializing default admin or mock medicines:', error);
@@ -95,14 +103,21 @@ export function useAuth() {
     }
   }, [toast]);
 
+
   const checkUserSessionAndAdmin = useCallback(async () => {
     setIsLoading(true);
     if (!db) {
         console.warn("Firestore not available during session check. App may not function correctly.");
+        toast({
+          title: 'Error de Conexión',
+          description: 'La base de datos no está disponible. Revisa tu configuración de Firebase y conexión a internet.',
+          variant: 'destructive',
+          duration: 7000
+        });
         setIsLoading(false);
         return;
     }
-    await initializeDefaultAdminAndData();
+    await initializeDefaultAdminAndData(); // Ensures admin and default data are checked/created
 
     try {
       const storedUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
@@ -113,6 +128,7 @@ export function useAuth() {
           setIsAuthenticated(true);
           setIsCurrentUserAdmin(!!userDetails.isAdmin);
         } else {
+          // User in localStorage but not in DB (e.g., deleted from Firestore)
           localStorage.removeItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
           setCurrentUser(null);
           setIsAuthenticated(false);
@@ -125,23 +141,19 @@ export function useAuth() {
       }
     } catch (error) {
       console.error("Error during user session check:", error);
+      // Fallback to unauthenticated state
       setCurrentUser(null);
       setIsAuthenticated(false);
       setIsCurrentUserAdmin(false);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchUserDetails, initializeDefaultAdminAndData]);
+  }, [fetchUserDetails, initializeDefaultAdminAndData, toast]);
 
 
   useEffect(() => {
-    if (db) {
-        checkUserSessionAndAdmin();
-    } else {
-        console.warn("useAuth useEffect: Firestore db not ready yet. Retrying or check initialization.");
-        setIsLoading(false);
-         toast({ title: 'Error de Configuración', description: 'La base de datos no está lista. Por favor, refresca la página.', variant: 'destructive' });
-    }
+    // The check for db is now inside checkUserSessionAndAdmin
+    checkUserSessionAndAdmin();
   }, [checkUserSessionAndAdmin]);
 
 
@@ -161,7 +173,7 @@ export function useAuth() {
     try {
       const userDetails = await fetchUserDetails(usernameInput);
 
-      if (userDetails && userDetails.password === passwordInput) {
+      if (userDetails && userDetails.password === passwordInput) { // Password check (insecure for production)
         localStorage.setItem(RXLOCAL_CURRENT_USER_USERNAME_KEY, userDetails.username);
         setCurrentUser(userDetails);
         setIsAuthenticated(true);
@@ -206,13 +218,14 @@ export function useAuth() {
         return;
       }
 
+      // Use generatedUsername as the document ID for custom auth
       const newUserDocRef = doc(collection(db, 'users'), generatedUsername);
       const newUser: Omit<UserData, 'firestoreId'> = {
         username: generatedUsername,
-        password: password,
+        password: password, // Storing passwords in Firestore directly is not secure for production.
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        isAdmin: false,
+        isAdmin: false, // New users are not admins by default
         createdAt: serverTimestamp() as Timestamp,
       };
 
@@ -220,7 +233,7 @@ export function useAuth() {
 
       const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
       toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Usuario: ${newUser.username}` });
-      router.push('/login');
+      router.push('/login'); // Redirect to login after successful registration
 
     } catch (error) {
       console.error('Registration error:', error);
@@ -241,13 +254,18 @@ export function useAuth() {
   }, [router, toast]);
 
   const getCurrentUserUsername = useCallback((): string | null => {
+    // Ensure this only runs on the client-side if localStorage is used.
+    // For Next.js 13+ App Router, direct localStorage access at component top-level can be tricky.
+    // This hook setup with useEffect for session check is generally fine.
     try {
       return localStorage.getItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
     } catch (error) {
+      // Handle cases where localStorage might not be available (e.g., SSR context, though unlikely here with "use client")
       return null;
     }
   }, []);
 
+  // Provides full user details from Firestore based on the currently logged-in username.
   const getCurrentUserDetails = useCallback(async (): Promise<UserData | null> => {
     const username = getCurrentUserUsername();
     if (username) {
@@ -266,7 +284,7 @@ export function useAuth() {
       const usersCollectionRef = collection(db, 'users');
       const usersSnapshot = await getDocs(usersCollectionRef);
       const usersList = usersSnapshot.docs.map(docSnapshot => ({
-        firestoreId: docSnapshot.id,
+        firestoreId: docSnapshot.id, // Store the Firestore document ID
         username: docSnapshot.data().username,
         firstName: docSnapshot.data().firstName,
         lastName: docSnapshot.data().lastName,
@@ -276,6 +294,7 @@ export function useAuth() {
       return usersList;
     } catch (error: any) {
       console.error("Error fetching users from Firestore in hook:", error);
+      // Propagate a more user-friendly or structured error
       throw new Error(`Error al obtener usuarios de Firestore: ${error.message || String(error)}`);
     }
   }, []);
@@ -296,7 +315,7 @@ export function useAuth() {
     } catch (error) {
       console.error('Error deleting user from Firestore:', error);
       toast({ title: 'Error al Eliminar', description: 'No se pudo eliminar el usuario de Firestore.', variant: 'destructive' });
-      throw error;
+      throw error; // Re-throw to allow caller to handle if needed
     }
   };
 
@@ -309,9 +328,9 @@ export function useAuth() {
     login,
     register,
     logout,
-    getCurrentUserUsername,
-    getCurrentUserDetails,
-    fetchUserDetails,
+    getCurrentUserUsername, // Expose this if direct username access is needed elsewhere
+    getCurrentUserDetails, // Expose for getting full details on demand
+    fetchUserDetails, // Expose if needed for other specific lookups
     getUsersFromFirestore,
     deleteUserFromFirestore,
   };
