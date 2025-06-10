@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 const RXLOCAL_USERS_KEY = 'rxlocal_users_v2'; 
 const RXLOCAL_CURRENT_USER_KEY = 'rxlocal_currentUser_v2'; 
 
-interface UserData {
+export interface UserData {
   username: string; 
   password?: string;
   firstName: string;
@@ -40,21 +40,14 @@ export function useAuth() {
     return users;
   };
 
-  const getUsers = (): UserData[] => {
+  const getUsers = useCallback((): UserData[] => {
     try {
       let usersJson = localStorage.getItem(RXLOCAL_USERS_KEY);
       let users: UserData[] = usersJson ? JSON.parse(usersJson) : [];
       
-      // Ensure default admin exists
-      if (users.length === 0) { 
+      if (users.length === 0 || !users.some(u => u.username === 'admin.admin' && u.isAdmin)) {
          users = initializeDefaultAdmin(users);
          saveUsers(users); 
-      } else {
-        const adminExists = users.some(u => u.username === 'admin.admin');
-        if (!adminExists) {
-            users = initializeDefaultAdmin(users);
-            saveUsers(users);
-        }
       }
       return users;
     } catch (error) {
@@ -64,7 +57,7 @@ export function useAuth() {
       saveUsers(users);
       return users;
     }
-  };
+  }, []); 
 
   const saveUsers = (users: UserData[]) => {
     try {
@@ -74,20 +67,29 @@ export function useAuth() {
     }
   };
 
+  const logoutCallback = useCallback(() => { 
+    localStorage.removeItem(RXLOCAL_CURRENT_USER_KEY);
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setIsCurrentUserAdmin(false);
+    router.push('/login');
+    toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
+  }, [router, toast]);
+
   useEffect(() => {
     getUsers(); 
 
     try {
       const storedCurrentUserUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
       if (storedCurrentUserUsername) {
-        const users = getUsers(); 
-        const loggedInUser = users.find(u => u.username === storedCurrentUserUsername);
+        const allUsers = getUsers(); 
+        const loggedInUser = allUsers.find(u => u.username === storedCurrentUserUsername);
         if (loggedInUser) {
             setIsAuthenticated(true);
             setCurrentUser(loggedInUser.username);
             setIsCurrentUserAdmin(!!loggedInUser.isAdmin);
         } else {
-            logout(); 
+            logoutCallback(); 
         }
       } else {
         setIsAuthenticated(false);
@@ -101,7 +103,7 @@ export function useAuth() {
       setIsCurrentUserAdmin(false);
     }
     setIsLoading(false);
-  }, []);
+  }, [getUsers, logoutCallback]); 
 
   const login = useCallback(async (username?: string, password?: string) => {
     setIsLoading(true);
@@ -129,7 +131,7 @@ export function useAuth() {
       setIsCurrentUserAdmin(false);
     }
     setIsLoading(false);
-  }, [router, toast]);
+  }, [router, toast, getUsers]);
 
   const register = useCallback(async (firstName?: string, lastName?: string, password?: string) => {
     setIsLoading(true);
@@ -161,16 +163,8 @@ export function useAuth() {
     toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Ahora puedes iniciar sesión con el usuario: ${newUser.username}` });
     await login(newUser.username, password); 
     setIsLoading(false);
-  }, [toast, login]);
+  }, [toast, login, getUsers]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(RXLOCAL_CURRENT_USER_KEY);
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setIsCurrentUserAdmin(false);
-    router.push('/login');
-    toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
-  }, [router, toast]);
 
   const getCurrentUserUsername = useCallback((): string | null => {
     try {
@@ -185,8 +179,8 @@ export function useAuth() {
     if (!username) return null;
     const users = getUsers();
     return users.find(u => u.username === username) || null;
-  }, [getCurrentUserUsername]);
+  }, [getCurrentUserUsername, getUsers]);
 
 
-  return { isAuthenticated, isLoading, currentUser, isCurrentUserAdmin, login, register, logout, getCurrentUserUsername, getCurrentUserDetails };
+  return { isAuthenticated, isLoading, currentUser, isCurrentUserAdmin, login, register, logout: logoutCallback, getUsers, saveUsers, getCurrentUserUsername, getCurrentUserDetails };
 }

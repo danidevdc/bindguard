@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, PackagePlus, Edit3, LockKeyhole, FileX2, Settings, PillBottle } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, PackagePlus, Edit3, LockKeyhole, FileX2, Settings, PillBottle, Users } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -105,7 +105,19 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Placeholder para más funcionalidades */}
+            {/* Gestión de Usuarios */}
+            <div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Usuarios</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Link href="/admin/manage-users" passHref legacyBehavior>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <Users className="mr-3 h-6 w-6 text-blue-600" />
+                    Gestionar Usuarios
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
             <p className="text-center text-muted-foreground mt-6">
               Más herramientas de administración se añadirán aquí progresivamente.
             </p>
