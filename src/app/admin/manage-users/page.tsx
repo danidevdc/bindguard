@@ -10,36 +10,60 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ShieldAlert, ArrowLeft, Users, Trash2, UserCog, User } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Users, Trash2, UserCog, User, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function ManageUsersPage() {
-  const { isCurrentUserAdmin, isLoading: authLoading, getUsers, saveUsers, getCurrentUserUsername } = useAuth();
+  const { 
+    isCurrentUserAdmin, 
+    isLoading: authLoading, 
+    getUsersFromFirestore, // Changed from getUsers
+    deleteUserFromAuth, 
+    getCurrentUserUsername 
+  } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserData[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const loggedInUsername = getCurrentUserUsername();
 
-  const loadUsers = useCallback(() => {
-    setUsers(getUsers());
-  }, [getUsers]);
+  const loadUsers = useCallback(async () => {
+    setIsLoadingUsers(true);
+    if (isCurrentUserAdmin) {
+      try {
+        const firestoreUsers = await getUsersFromFirestore();
+        setUsers(firestoreUsers);
+      } catch (error) {
+        console.error("Failed to load users:", error);
+        toast({
+          title: 'Error al Cargar Usuarios',
+          description: 'No se pudo obtener la lista de usuarios desde la base de datos.',
+          variant: 'destructive',
+        });
+        setUsers([]);
+      }
+    }
+    setIsLoadingUsers(false);
+  }, [isCurrentUserAdmin, getUsersFromFirestore, toast]);
 
   useEffect(() => {
-    if (!authLoading && !isCurrentUserAdmin) {
-      toast({
-        title: 'Acceso Denegado',
-        description: 'No tienes permisos para acceder a esta página.',
-        variant: 'destructive',
-      });
-      router.replace('/dashboard');
-    } else if (!authLoading) {
-      loadUsers();
+    if (!authLoading) {
+      if (!isCurrentUserAdmin) {
+        toast({
+          title: 'Acceso Denegado',
+          description: 'No tienes permisos para acceder a esta página.',
+          variant: 'destructive',
+        });
+        router.replace('/dashboard');
+      } else {
+        loadUsers();
+      }
     }
   }, [isCurrentUserAdmin, authLoading, router, toast, loadUsers]);
 
-  const handleDeleteUser = () => {
-    if (!userToDelete) return;
+  const handleDeleteUser = async () => {
+    if (!userToDelete || !userToDelete.firestoreId) return;
 
     if (userToDelete.username === loggedInUsername) {
       toast({
@@ -62,7 +86,7 @@ export default function ManageUsersPage() {
       return;
     }
     
-    if (userToDelete.username === 'admin.admin' && userToDelete.isAdmin && adminUsers.length <= 1) {
+    if (userToDelete.username === 'admin.admin' && userToDelete.isAdmin && users.filter(u => u.isAdmin).length <=1) {
          toast({
             title: 'Acción no permitida',
             description: 'No puedes eliminar la cuenta "admin.admin" si es la única cuenta de administrador.',
@@ -72,18 +96,26 @@ export default function ManageUsersPage() {
         return;
     }
 
-
-    const updatedUsers = users.filter(u => u.username !== userToDelete.username);
-    saveUsers(updatedUsers);
-    setUsers(updatedUsers); // Update local state to re-render
-    toast({
-      title: 'Usuario Eliminado',
-      description: `El usuario "${userToDelete.firstName} ${userToDelete.lastName}" (${userToDelete.username}) ha sido eliminado.`,
-    });
-    setUserToDelete(null);
+    try {
+      await deleteUserFromAuth(userToDelete.firestoreId);
+      toast({
+        title: 'Usuario Eliminado',
+        description: `El usuario "${userToDelete.firstName} ${userToDelete.lastName}" (${userToDelete.username}) ha sido eliminado.`,
+      });
+      loadUsers(); // Recargar usuarios para actualizar la lista
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast({
+        title: 'Error al Eliminar',
+        description: 'No se pudo eliminar el usuario.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUserToDelete(null);
+    }
   };
 
-  if (authLoading || !isCurrentUserAdmin) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <ShieldAlert className="h-16 w-16 text-primary animate-pulse" />
@@ -103,82 +135,87 @@ export default function ManageUsersPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
       </div>
-      <Card className="w-full max-w-3xl mx-auto shadow-lg">
-        <CardHeader className="text-center">
-          <Users className="h-12 w-12 mx-auto text-primary mb-3" />
-          <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
-            Gestionar Usuarios
-          </CardTitle>
-          <CardDescription>
-            Ver y eliminar usuarios registrados en el sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {users.length > 0 ? (
-            <div className="overflow-x-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Nombre Completo</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.username}>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
-                      <TableCell>
-                        {user.isAdmin ? (
-                          <Badge variant="destructive" className="flex items-center w-fit">
-                            <UserCog className="mr-1 h-3.5 w-3.5" /> Administrador
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="flex items-center w-fit">
-                            <User className="mr-1 h-3.5 w-3.5" /> Usuario
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {user.username !== loggedInUsername && (
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => setUserToDelete(user)}
-                              aria-label={`Eliminar usuario ${user.username}`}
-                              disabled={
-                                (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
-                                (user.isAdmin && users.filter(u => u.isAdmin).length === 1) 
-                              }
-                              title={
-                                (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
-                                (user.isAdmin && users.filter(u => u.isAdmin).length === 1) ? 
-                                'No se puede eliminar al único administrador' : `Eliminar ${user.username}`
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground">No hay usuarios registrados además de ti.</p>
-          )}
-        </CardContent>
-      </Card>
 
+      {/* AlertDialog raíz que envuelve la Card y el AlertDialogContent */}
       <AlertDialog open={!!userToDelete} onOpenChange={(isOpen) => { if (!isOpen) setUserToDelete(null); }}>
-        {/* AlertDialogTrigger is not needed here as it's in the table rows.
-            The 'open' prop controls the dialog's visibility based on 'userToDelete' state. */}
+        <Card className="w-full max-w-3xl mx-auto shadow-lg">
+          <CardHeader className="text-center">
+            <Users className="h-12 w-12 mx-auto text-primary mb-3" />
+            <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
+              Gestionar Usuarios
+            </CardTitle>
+            <CardDescription>
+              Ver y eliminar usuarios registrados en el sistema.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoadingUsers ? (
+              <div className="flex justify-center items-center p-10">
+                <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                <p className="ml-3 text-muted-foreground">Cargando usuarios...</p>
+              </div>
+            ) : users.length > 0 ? (
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuario</TableHead>
+                      <TableHead>Nombre Completo</TableHead>
+                      <TableHead>Rol</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.username}>
+                        <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
+                        <TableCell>
+                          {user.isAdmin ? (
+                            <Badge variant="destructive" className="flex items-center w-fit">
+                              <UserCog className="mr-1 h-3.5 w-3.5" /> Administrador
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="flex items-center w-fit">
+                              <User className="mr-1 h-3.5 w-3.5" /> Usuario
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {user.username !== loggedInUsername && (
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setUserToDelete(user)} // Este onClick establece qué usuario se va a eliminar
+                                disabled={
+                                  (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
+                                  (user.isAdmin && users.filter(u => u.isAdmin).length === 1) 
+                                }
+                                title={
+                                  (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
+                                  (user.isAdmin && users.filter(u => u.isAdmin).length === 1) ? 
+                                  'No se puede eliminar al único administrador' : `Eliminar ${user.username}`
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground">No hay usuarios registrados además de ti (o no se pudieron cargar).</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AlertDialogContent ahora es hijo del AlertDialog raíz que envuelve la Card */}
         {userToDelete && (
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -202,4 +239,3 @@ export default function ManageUsersPage() {
     </AuthWrapper>
   );
 }
-
