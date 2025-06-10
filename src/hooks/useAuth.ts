@@ -4,183 +4,315 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  query,
+  where,
+  deleteDoc,
+  serverTimestamp,
+  Timestamp,
+  writeBatch
+} from 'firebase/firestore';
+import { initializeDefaultMedicines, mockMedicinesForFirestore, type Medicine as MedicineData } from '@/lib/medicineService';
 
-const RXLOCAL_USERS_KEY = 'rxlocal_users_v2'; 
-const RXLOCAL_CURRENT_USER_KEY = 'rxlocal_currentUser_v2'; 
+
+const RXLOCAL_CURRENT_USER_USERNAME_KEY = 'rxlocal_currentUser_username_v3';
 
 export interface UserData {
-  username: string; 
+  username: string;
   password?: string;
   firstName: string;
   lastName: string;
-  isAdmin?: boolean; 
+  isAdmin?: boolean;
+  createdAt?: Timestamp;
+  firestoreId?: string;
 }
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null); 
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
-  const initializeDefaultAdmin = (users: UserData[]): UserData[] => {
-    const adminExists = users.some(u => u.username === 'admin.admin');
-    if (!adminExists) {
-      const adminUser: UserData = {
-        username: 'admin.admin',
-        password: 'admin123', 
-        firstName: 'Admin',
-        lastName: 'User',
-        isAdmin: true,
-      };
-      users.push(adminUser);
-      console.log("Default admin user created.");
+  const fetchUserDetails = useCallback(async (username: string): Promise<UserData | null> => {
+    if (!db) {
+      console.error("Firestore instance (db) is not available for fetching user details.");
+      toast({ title: 'Error de Configuración', description: 'La base de datos no está inicializada.', variant: 'destructive' });
+      return null;
     }
-    return users;
-  };
-
-  const getUsers = useCallback((): UserData[] => {
     try {
-      let usersJson = localStorage.getItem(RXLOCAL_USERS_KEY);
-      let users: UserData[] = usersJson ? JSON.parse(usersJson) : [];
-      
-      if (users.length === 0 || !users.some(u => u.username === 'admin.admin' && u.isAdmin)) {
-         users = initializeDefaultAdmin(users);
-         saveUsers(users); 
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('username', '==', username));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        return { firestoreId: userDoc.id, ...userDoc.data() } as UserData;
       }
-      return users;
+      return null;
     } catch (error) {
-      console.warn('Error reading users from localStorage', error);
-      let users: UserData[] = [];
-      users = initializeDefaultAdmin(users);
-      saveUsers(users);
-      return users;
+      console.error('Error fetching user details from Firestore:', error);
+      toast({ title: 'Error de Red', description: 'No se pudieron obtener los detalles del usuario. Verifica tu conexión y las reglas de Firestore.', variant: 'destructive' });
+      return null;
     }
-  }, []); 
+  }, [toast]);
 
-  const saveUsers = (users: UserData[]) => {
+  const initializeDefaultAdminAndData = useCallback(async () => {
+    if (!db) {
+      console.error("Firestore instance (db) is not available for admin/data initialization.");
+      return;
+    }
     try {
-      localStorage.setItem(RXLOCAL_USERS_KEY, JSON.stringify(users));
+      // Initialize Admin User
+      const usersRef = collection(db, 'users');
+      const adminQuery = query(usersRef, where('username', '==', 'admin.admin'));
+      const adminSnapshot = await getDocs(adminQuery);
+
+      if (adminSnapshot.empty) {
+        const adminUser: Omit<UserData, 'firestoreId'> = {
+          username: 'admin.admin',
+          password: 'admin123',
+          firstName: 'Admin',
+          lastName: 'BindGuard',
+          isAdmin: true,
+          createdAt: serverTimestamp() as Timestamp,
+        };
+        await setDoc(doc(usersRef, 'admin.admin'), adminUser);
+        console.log('Default admin user "admin.admin" created in Firestore.');
+      }
+
+      // Initialize Default Medicines
+      await initializeDefaultMedicines();
+
     } catch (error) {
-      console.warn('Error saving users to localStorage', error);
+      console.error('Error initializing default admin or mock medicines:', error);
+      toast({ title: 'Error de Inicialización del Sistema', description: 'No se pudo configurar el administrador o datos iniciales.', variant: 'destructive' });
     }
-  };
+  }, [toast]);
 
-  const logoutCallback = useCallback(() => { 
-    localStorage.removeItem(RXLOCAL_CURRENT_USER_KEY);
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setIsCurrentUserAdmin(false);
-    router.push('/login');
-    toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
-  }, [router, toast]);
-
-  useEffect(() => {
-    getUsers(); 
+  const checkUserSessionAndAdmin = useCallback(async () => {
+    setIsLoading(true);
+    if (!db) {
+        console.warn("Firestore not available during session check. App may not function correctly.");
+        setIsLoading(false);
+        return;
+    }
+    await initializeDefaultAdminAndData();
 
     try {
-      const storedCurrentUserUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
-      if (storedCurrentUserUsername) {
-        const allUsers = getUsers(); 
-        const loggedInUser = allUsers.find(u => u.username === storedCurrentUserUsername);
-        if (loggedInUser) {
-            setIsAuthenticated(true);
-            setCurrentUser(loggedInUser.username);
-            setIsCurrentUserAdmin(!!loggedInUser.isAdmin);
+      const storedUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
+      if (storedUsername) {
+        const userDetails = await fetchUserDetails(storedUsername);
+        if (userDetails) {
+          setCurrentUser(userDetails);
+          setIsAuthenticated(true);
+          setIsCurrentUserAdmin(!!userDetails.isAdmin);
         } else {
-            logoutCallback(); 
+          localStorage.removeItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+          setIsCurrentUserAdmin(false);
         }
       } else {
-        setIsAuthenticated(false);
         setCurrentUser(null);
+        setIsAuthenticated(false);
         setIsCurrentUserAdmin(false);
       }
     } catch (error) {
-      console.warn('localStorage not available for auth check, defaulting to unauthenticated.');
-      setIsAuthenticated(false);
+      console.error("Error during user session check:", error);
       setCurrentUser(null);
+      setIsAuthenticated(false);
       setIsCurrentUserAdmin(false);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [getUsers, logoutCallback]); 
+  }, [fetchUserDetails, initializeDefaultAdminAndData]);
 
-  const login = useCallback(async (username?: string, password?: string) => {
+
+  useEffect(() => {
+    if (db) {
+        checkUserSessionAndAdmin();
+    } else {
+        console.warn("useAuth useEffect: Firestore db not ready yet. Retrying or check initialization.");
+        setIsLoading(false);
+         toast({ title: 'Error de Configuración', description: 'La base de datos no está lista. Por favor, refresca la página.', variant: 'destructive' });
+    }
+  }, [checkUserSessionAndAdmin]);
+
+
+  const login = useCallback(async (usernameInput?: string, passwordInput?: string) => {
     setIsLoading(true);
-    if (!username || !password) {
-      toast({ title: "Error", description: "Usuario o contraseña inválidos.", variant: "destructive" });
+    if (!db) {
+      toast({ title: 'Error de Configuración', description: 'La base de datos no está disponible.', variant: 'destructive' });
+      setIsLoading(false);
+      return;
+    }
+    if (!usernameInput || !passwordInput) {
+      toast({ title: "Error", description: "Usuario y contraseña son requeridos.", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
-    const users = getUsers();
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+    try {
+      const userDetails = await fetchUserDetails(usernameInput);
 
-    if (user) {
-      localStorage.setItem(RXLOCAL_CURRENT_USER_KEY, user.username);
-      setIsAuthenticated(true);
-      setCurrentUser(user.username);
-      setIsCurrentUserAdmin(!!user.isAdmin);
-      const capitalizedFirstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1).toLowerCase();
-      toast({ title: "Inicio de Sesión Exitoso", description: `¡Bienvenido de nuevo, ${capitalizedFirstName}!` });
-      router.push('/dashboard');
-    } else {
-      toast({ title: "Error de Inicio de Sesión", description: "Credenciales incorrectas. Inténtalo de nuevo.", variant: "destructive" });
-      setIsAuthenticated(false);
-      setCurrentUser(null);
-      setIsCurrentUserAdmin(false);
+      if (userDetails && userDetails.password === passwordInput) {
+        localStorage.setItem(RXLOCAL_CURRENT_USER_USERNAME_KEY, userDetails.username);
+        setCurrentUser(userDetails);
+        setIsAuthenticated(true);
+        setIsCurrentUserAdmin(!!userDetails.isAdmin);
+        const capitalizedFirstName = userDetails.firstName.charAt(0).toUpperCase() + userDetails.firstName.slice(1).toLowerCase();
+        toast({ title: "Inicio de Sesión Exitoso", description: `¡Bienvenido de nuevo, ${capitalizedFirstName}!` });
+        router.push('/dashboard');
+      } else {
+        toast({ title: "Error de Inicio de Sesión", description: "Credenciales incorrectas.", variant: "destructive" });
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        setIsCurrentUserAdmin(false);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({ title: "Error de Inicio de Sesión", description: "Ocurrió un problema al iniciar sesión.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [router, toast, getUsers]);
+  }, [router, toast, fetchUserDetails]);
 
   const register = useCallback(async (firstName?: string, lastName?: string, password?: string) => {
     setIsLoading(true);
+    if (!db) {
+      toast({ title: 'Error de Configuración', description: 'La base de datos no está disponible.', variant: 'destructive' });
+      setIsLoading(false);
+      return;
+    }
     if (!firstName || !lastName || !password) {
-      toast({ title: "Error de Registro", description: "Nombre, apellido y contraseña son requeridos.", variant: "destructive" });
+      toast({ title: "Error de Registro", description: "Todos los campos son requeridos.", variant: "destructive" });
       setIsLoading(false);
       return;
     }
 
     const generatedUsername = `${firstName.trim().toLowerCase()}.${lastName.trim().toLowerCase()}`;
-    const users = getUsers();
 
-    if (users.find(u => u.username.toLowerCase() === generatedUsername.toLowerCase())) {
-      toast({ title: "Error de Registro", description: "Este usuario (combinación nombre/apellido) ya existe.", variant: "destructive" });
+    try {
+      const existingUser = await fetchUserDetails(generatedUsername);
+      if (existingUser) {
+        toast({ title: "Error de Registro", description: "Este usuario (nombre.apellido) ya existe.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+
+      const newUserDocRef = doc(collection(db, 'users'), generatedUsername);
+      const newUser: Omit<UserData, 'firestoreId'> = {
+        username: generatedUsername,
+        password: password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        isAdmin: false,
+        createdAt: serverTimestamp() as Timestamp,
+      };
+
+      await setDoc(newUserDocRef, newUser);
+
+      const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
+      toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Usuario: ${newUser.username}` });
+      router.push('/login');
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast({ title: "Error de Registro", description: "Ocurrió un problema al crear la cuenta.", variant: "destructive" });
+    } finally {
       setIsLoading(false);
-      return;
     }
+  }, [toast, fetchUserDetails, router]);
 
-    const newUser: UserData = { 
-      username: generatedUsername, 
-      password,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      isAdmin: false, 
-    };
-    saveUsers([...users, newUser]);
-    
-    const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
-    toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Ahora puedes iniciar sesión con el usuario: ${newUser.username}` });
-    await login(newUser.username, password); 
-    setIsLoading(false);
-  }, [toast, login, getUsers]);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setIsCurrentUserAdmin(false);
+    router.push('/login');
+    toast({ title: "Sesión Cerrada", description: "Has cerrado sesión exitosamente." });
+  }, [router, toast]);
 
   const getCurrentUserUsername = useCallback((): string | null => {
     try {
-      return localStorage.getItem(RXLOCAL_CURRENT_USER_KEY);
+      return localStorage.getItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
     } catch (error) {
       return null;
     }
   }, []);
-  
-  const getCurrentUserDetails = useCallback((): UserData | null => {
+
+  const getCurrentUserDetails = useCallback(async (): Promise<UserData | null> => {
     const username = getCurrentUserUsername();
-    if (!username) return null;
-    const users = getUsers();
-    return users.find(u => u.username === username) || null;
-  }, [getCurrentUserUsername, getUsers]);
+    if (username) {
+        return fetchUserDetails(username);
+    }
+    return null;
+  }, [getCurrentUserUsername, fetchUserDetails]);
 
 
-  return { isAuthenticated, isLoading, currentUser, isCurrentUserAdmin, login, register, logout: logoutCallback, getUsers, saveUsers, getCurrentUserUsername, getCurrentUserDetails };
+  const getUsersFromFirestore = useCallback(async (): Promise<UserData[]> => {
+    if (!db) {
+      console.error("Firestore instance (db) is not available in getUsersFromFirestore.");
+      throw new Error("La base de datos (Firestore) no está inicializada o disponible.");
+    }
+    try {
+      const usersCollectionRef = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersCollectionRef);
+      const usersList = usersSnapshot.docs.map(docSnapshot => ({
+        firestoreId: docSnapshot.id,
+        username: docSnapshot.data().username,
+        firstName: docSnapshot.data().firstName,
+        lastName: docSnapshot.data().lastName,
+        isAdmin: docSnapshot.data().isAdmin || false,
+        // Do not include password in the list returned to the client
+      } as UserData));
+      return usersList;
+    } catch (error: any) {
+      console.error("Error fetching users from Firestore in hook:", error);
+      throw new Error(`Error al obtener usuarios de Firestore: ${error.message || String(error)}`);
+    }
+  }, []);
+
+  const deleteUserFromFirestore = async (userFirestoreId: string): Promise<void> => {
+    if (!db) {
+      toast({ title: 'Error de Configuración', description: 'La base de datos no está disponible.', variant: 'destructive' });
+      throw new Error("Firestore not initialized");
+    }
+    if (!userFirestoreId) {
+      toast({ title: 'Error', description: 'ID de usuario no proporcionado.', variant: 'destructive' });
+      throw new Error("User ID not provided for deletion.");
+    }
+    try {
+      const userDocRef = doc(db, 'users', userFirestoreId);
+      await deleteDoc(userDocRef);
+      toast({ title: 'Usuario Eliminado', description: 'El usuario ha sido eliminado de Firestore.' });
+    } catch (error) {
+      console.error('Error deleting user from Firestore:', error);
+      toast({ title: 'Error al Eliminar', description: 'No se pudo eliminar el usuario de Firestore.', variant: 'destructive' });
+      throw error;
+    }
+  };
+
+
+  return {
+    isAuthenticated,
+    isLoading,
+    currentUser,
+    isCurrentUserAdmin,
+    login,
+    register,
+    logout,
+    getCurrentUserUsername,
+    getCurrentUserDetails,
+    fetchUserDetails,
+    getUsersFromFirestore,
+    deleteUserFromFirestore,
+  };
 }

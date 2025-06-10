@@ -10,16 +10,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ShieldAlert, ArrowLeft, Users, Trash2, UserCog, User, Loader2 } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Users, Trash2, UserCog, User, Loader2, RefreshCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function ManageUsersPage() {
-  const { 
-    isCurrentUserAdmin, 
-    isLoading: authLoading, 
-    getUsersFromFirestore, // Changed from getUsers
-    deleteUserFromAuth, 
-    getCurrentUserUsername 
+  const {
+    isCurrentUserAdmin,
+    isLoading: authLoading,
+    getUsersFromFirestore,
+    deleteUserFromFirestore, // Updated function name
+    getCurrentUserUsername
   } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -28,17 +28,23 @@ export default function ManageUsersPage() {
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const loggedInUsername = getCurrentUserUsername();
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = useCallback(async (showToastOnSuccess = false) => {
     setIsLoadingUsers(true);
     if (isCurrentUserAdmin) {
       try {
         const firestoreUsers = await getUsersFromFirestore();
         setUsers(firestoreUsers);
+        if (showToastOnSuccess) {
+            toast({
+                title: 'Usuarios Actualizados',
+                description: 'La lista de usuarios ha sido recargada.',
+            });
+        }
       } catch (error) {
         console.error("Failed to load users:", error);
         toast({
           title: 'Error al Cargar Usuarios',
-          description: 'No se pudo obtener la lista de usuarios desde la base de datos.',
+          description: error instanceof Error ? error.message : 'No se pudo obtener la lista de usuarios desde la base de datos.',
           variant: 'destructive',
         });
         setUsers([]);
@@ -74,40 +80,40 @@ export default function ManageUsersPage() {
       setUserToDelete(null);
       return;
     }
-
+    
     const adminUsers = users.filter(u => u.isAdmin);
     if (userToDelete.isAdmin && adminUsers.length === 1 && adminUsers[0].username === userToDelete.username) {
-      toast({
-        title: 'Acción no permitida',
-        description: 'No puedes eliminar al único administrador del sistema.',
-        variant: 'destructive',
-      });
-      setUserToDelete(null);
-      return;
-    }
-    
-    if (userToDelete.username === 'admin.admin' && userToDelete.isAdmin && users.filter(u => u.isAdmin).length <=1) {
-         toast({
+        toast({
             title: 'Acción no permitida',
-            description: 'No puedes eliminar la cuenta "admin.admin" si es la única cuenta de administrador.',
+            description: 'No puedes eliminar al único administrador del sistema.',
             variant: 'destructive',
         });
         setUserToDelete(null);
         return;
     }
+    
+    // Adicionalmente, proteger la cuenta 'admin.admin' si es el único admin
+    if (userToDelete.username === 'admin.admin' && userToDelete.isAdmin && adminUsers.length <= 1) {
+       toast({
+          title: 'Acción no permitida',
+          description: 'No puedes eliminar la cuenta "admin.admin" si es el único administrador.',
+          variant: 'destructive',
+      });
+      setUserToDelete(null);
+      return;
+    }
+
 
     try {
-      await deleteUserFromAuth(userToDelete.firestoreId);
-      toast({
-        title: 'Usuario Eliminado',
-        description: `El usuario "${userToDelete.firstName} ${userToDelete.lastName}" (${userToDelete.username}) ha sido eliminado.`,
-      });
+      await deleteUserFromFirestore(userToDelete.firestoreId); // Updated function name
+      // El toast de éxito se maneja dentro de deleteUserFromFirestore
       loadUsers(); // Recargar usuarios para actualizar la lista
     } catch (error) {
       console.error("Failed to delete user:", error);
+      // El toast de error se maneja dentro de deleteUserFromFirestore o aquí si se relanza
       toast({
         title: 'Error al Eliminar',
-        description: 'No se pudo eliminar el usuario.',
+        description: error instanceof Error ? error.message : 'No se pudo eliminar el usuario.',
         variant: 'destructive',
       });
     } finally {
@@ -115,7 +121,7 @@ export default function ManageUsersPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading && !isCurrentUserAdmin) { // Mostrar ShieldAlert solo si auth está cargando Y el usuario aún no es admin (o no se sabe)
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <ShieldAlert className="h-16 w-16 text-primary animate-pulse" />
@@ -123,21 +129,31 @@ export default function ManageUsersPage() {
     );
   }
 
+
   return (
     <AuthWrapper>
-      <div className="mb-6">
-        <Button
-          variant="default"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          onClick={() => router.push('/admin')}
-          aria-label="Volver al Panel de Admin"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* AlertDialog raíz que envuelve la Card y el AlertDialogContent */}
       <AlertDialog open={!!userToDelete} onOpenChange={(isOpen) => { if (!isOpen) setUserToDelete(null); }}>
+        <div className="mb-6 flex justify-between items-center">
+          <Button
+            variant="default"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            onClick={() => router.push('/admin')}
+            aria-label="Volver al Panel de Admin"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => loadUsers(true)}
+            aria-label="Refrescar lista de usuarios"
+            disabled={isLoadingUsers}
+            className="hover:bg-accent hover:text-accent-foreground"
+          >
+            {isLoadingUsers ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCcw className="h-5 w-5" />}
+             <span className="ml-2 hidden sm:inline">Refrescar</span>
+          </Button>
+        </div>
+
         <Card className="w-full max-w-3xl mx-auto shadow-lg">
           <CardHeader className="text-center">
             <Users className="h-12 w-12 mx-auto text-primary mb-3" />
@@ -149,7 +165,7 @@ export default function ManageUsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
-            {isLoadingUsers ? (
+            {isLoadingUsers && !users.length ? ( // Mostrar loader solo si no hay usuarios en la lista aún
               <div className="flex justify-center items-center p-10">
                 <Loader2 className="h-10 w-10 text-primary animate-spin" />
                 <p className="ml-3 text-muted-foreground">Cargando usuarios...</p>
@@ -167,7 +183,7 @@ export default function ManageUsersPage() {
                   </TableHeader>
                   <TableBody>
                     {users.map((user) => (
-                      <TableRow key={user.username}>
+                      <TableRow key={user.firestoreId || user.username}>
                         <TableCell className="font-medium">{user.username}</TableCell>
                         <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
                         <TableCell>
@@ -182,20 +198,20 @@ export default function ManageUsersPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {user.username !== loggedInUsername && (
+                          {user.username !== loggedInUsername && ( // No se puede eliminar a sí mismo
                             <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => setUserToDelete(user)} // Este onClick establece qué usuario se va a eliminar
+                                onClick={() => setUserToDelete(user)}
                                 disabled={
                                   (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
-                                  (user.isAdmin && users.filter(u => u.isAdmin).length === 1) 
+                                  (user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.username === users.find(u => u.isAdmin)?.username)
                                 }
                                 title={
                                   (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
-                                  (user.isAdmin && users.filter(u => u.isAdmin).length === 1) ? 
+                                  (user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.username === users.find(u => u.isAdmin)?.username) ?
                                   'No se puede eliminar al único administrador' : `Eliminar ${user.username}`
                                 }
                               >
@@ -210,12 +226,13 @@ export default function ManageUsersPage() {
                 </Table>
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">No hay usuarios registrados además de ti (o no se pudieron cargar).</p>
+              <p className="text-center text-muted-foreground py-6">
+                No hay usuarios registrados o no se pudieron cargar. Verifica tus reglas de Firestore.
+              </p>
             )}
           </CardContent>
         </Card>
 
-        {/* AlertDialogContent ahora es hijo del AlertDialog raíz que envuelve la Card */}
         {userToDelete && (
           <AlertDialogContent>
             <AlertDialogHeader>
