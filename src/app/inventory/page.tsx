@@ -3,33 +3,49 @@
 
 import AuthWrapper from '@/components/AuthWrapper';
 import InventoryList from '@/components/inventory/InventoryList';
-import { getStoredMedicines, type Medicine } from '@/lib/placeholder-data';
+import { getMedicinesFromFirestore, type Medicine } from '@/lib/medicineService'; // Updated import
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RotateCw } from 'lucide-react'; // Added RotateCw for refresh
+import { ArrowLeft, RotateCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton'; // For loading state
+import { useEffect, useState, useCallback } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from "@/hooks/use-toast";
 
 export default function InventoryPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
-  const loadMedicines = () => {
+  const loadMedicines = useCallback(async (showToast = false) => {
     setIsLoading(true);
-    // Simulate a small delay for loading perception if needed, or remove for instant load
-    // setTimeout(() => {
-      const storedMeds = getStoredMedicines();
-      setMedicines(storedMeds);
+    try {
+      const firestoreMedicines = await getMedicinesFromFirestore();
+      setMedicines(firestoreMedicines);
+      if (showToast) {
+        toast({
+          title: "Inventario Actualizado",
+          description: "La lista de medicamentos ha sido recargada desde la base de datos.",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load medicines from Firestore:", error);
+      toast({
+        title: "Error al Cargar Inventario",
+        description: error instanceof Error ? error.message : "No se pudo obtener el inventario desde Firestore.",
+        variant: "destructive",
+      });
+      setMedicines([]); // Clear medicines on error
+    } finally {
       setIsLoading(false);
-    // }, 200); 
-  };
+    }
+  }, [toast]);
 
   useEffect(() => {
     loadMedicines();
-  }, []);
+  }, [loadMedicines]);
 
-  if (isLoading) {
+  if (isLoading && medicines.length === 0) { // Show skeleton only on initial load without data
     return (
       <AuthWrapper>
         <div className="mb-6 flex justify-between items-center">
@@ -44,15 +60,15 @@ export default function InventoryPage() {
           </Button>
            <Button
             variant="outline"
-            onClick={loadMedicines}
+            onClick={() => loadMedicines(true)}
             aria-label="Refrescar lista de inventario"
             disabled
           >
-            <RotateCw className="h-5 w-5" />
+            <RotateCw className="h-5 w-5 animate-spin" />
           </Button>
         </div>
         <div className="space-y-8">
-          <Skeleton className="h-10 w-1/2 mx-auto" /> {/* Search bar skeleton */}
+          <Skeleton className="h-10 w-full max-w-lg mx-auto" /> {/* Search bar skeleton */}
           <div className="grid grid-cols-1 gap-6 max-w-3xl mx-auto">
             <Skeleton className="h-64 w-full rounded-lg" />
             <Skeleton className="h-64 w-full rounded-lg" />
@@ -76,16 +92,22 @@ export default function InventoryPage() {
         </Button>
          <Button
           variant="outline"
-          onClick={loadMedicines}
+          onClick={() => loadMedicines(true)} // Pass true to show toast on manual refresh
           aria-label="Refrescar lista de inventario"
           title="Refrescar Inventario"
           className="hover:bg-accent hover:text-accent-foreground"
+          disabled={isLoading} // Disable button while loading
         >
-          <RotateCw className="h-5 w-5" />
+          {isLoading ? <RotateCw className="h-5 w-5 animate-spin" /> : <RotateCw className="h-5 w-5" />}
         </Button>
       </div>
       <div className="space-y-8">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground text-center">Inventario General</h2>
+        { !isLoading && medicines.length === 0 && (
+          <p className="text-center text-muted-foreground py-10">
+            No hay medicamentos en el inventario o no se pudieron cargar. Intenta refrescar o verifica la conexión y configuración de Firestore.
+          </p>
+        )}
         <InventoryList medicines={medicines} />
       </div>
     </AuthWrapper>
