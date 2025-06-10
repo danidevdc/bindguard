@@ -92,12 +92,21 @@ export default function AddMedicinePage() {
         setMedicineName(jsonData.name || '');
         setPresentation(jsonData.presentation || '');
         setInitialStock(stockValue);
-        setManualExpirationDate(undefined); // Clear manual date if JSON is loaded
+        setManualExpirationDate(undefined); 
         
         if (jsonData.expirationDate) {
           const parsedDate = parseISO(jsonData.expirationDate);
           if (isValid(parsedDate)) {
             setJsonExpirationDate(jsonData.expirationDate);
+            // Check if this date is in the past relative to clientNow
+            if (clientNow && parsedDate <= clientNow) {
+                toast({
+                    title: 'Fecha de Expiración JSON en el Pasado',
+                    description: 'La fecha de expiración del JSON es pasada. Por favor, elija una fecha futura o ajuste el JSON.',
+                    variant: 'destructive'
+                });
+                setJsonExpirationDate(undefined); // Invalidate if past
+            }
           } else {
             toast({
               title: 'Fecha de Expiración Inválida en JSON',
@@ -161,24 +170,41 @@ export default function AddMedicinePage() {
       return;
     }
     
-    if (stockNum > 0 && !manualExpirationDate && !jsonExpirationDate) {
+    let finalExpirationDate: string | undefined = undefined;
+
+    if (manualExpirationDate) {
+        if (clientNow && manualExpirationDate <= clientNow) {
+            toast({
+                title: 'Fecha de Expiración Manual Inválida',
+                description: 'La fecha de expiración manual debe ser futura.',
+                variant: 'destructive',
+            });
+            return;
+        }
+        finalExpirationDate = formatDate(manualExpirationDate, 'yyyy-MM-dd');
+    } else if (jsonExpirationDate) {
+        const parsedJsonDate = parseISO(jsonExpirationDate);
+        if (clientNow && parsedJsonDate <= clientNow) {
+             toast({
+                title: 'Fecha de Expiración JSON Inválida',
+                description: 'La fecha de expiración del JSON debe ser futura.',
+                variant: 'destructive',
+            });
+            return;
+        }
+        finalExpirationDate = jsonExpirationDate;
+    }
+
+
+    if (stockNum > 0 && !finalExpirationDate) {
         toast({
             title: 'Fecha de Expiración Requerida',
-            description: 'Si ingresas stock inicial, debes proporcionar una fecha de expiración.',
+            description: 'Si ingresas stock inicial, debes proporcionar una fecha de expiración válida (manual o JSON).',
             variant: 'destructive',
         });
         return;
     }
 
-    if (manualExpirationDate && clientNow && manualExpirationDate <= clientNow) {
-        toast({
-            title: 'Fecha de Expiración Inválida',
-            description: 'La fecha de expiración manual debe ser futura.',
-            variant: 'destructive',
-        });
-        return;
-    }
-    // For JSON date, it's already validated if present
 
     const medicines = getStoredMedicines();
     if (medicines.find(med => med.id.toUpperCase() === currentId)) {
@@ -189,19 +215,12 @@ export default function AddMedicinePage() {
       });
       return;
     }
-
-    let finalExpirationDate: string | undefined = undefined;
-    if (manualExpirationDate) {
-        finalExpirationDate = formatDate(manualExpirationDate, 'yyyy-MM-dd');
-    } else if (jsonExpirationDate) {
-        finalExpirationDate = jsonExpirationDate;
-    }
-
+    
     const newDispensingHistory: DispensingRecord[] = [];
     if (stockNum > 0) {
       newDispensingHistory.push({
         id: `stock_init_${currentId}_${Date.now()}`,
-        date: new Date().toISOString().split('T')[0],
+        date: formatDate(new Date(), 'yyyy-MM-dd'), // Corrected date formatting
         rxNumber: 'STOCK-INICIAL',
         quantity: stockNum,
         type: 'stocked',
@@ -233,6 +252,9 @@ export default function AddMedicinePage() {
     setInitialStock('');
     setJsonExpirationDate(undefined);
     setManualExpirationDate(undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
 
@@ -372,7 +394,7 @@ export default function AddMedicinePage() {
                     </PopoverContent>
                 </Popover>
                 <p className="text-xs text-muted-foreground">
-                  Requerida si ingresas stock inicial.
+                  Requerida si ingresas stock inicial. La fecha del JSON tiene prioridad si se carga un archivo.
                 </p>
               </div>
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -386,3 +408,6 @@ export default function AddMedicinePage() {
     </AuthWrapper>
   );
 }
+
+
+    
