@@ -18,7 +18,7 @@ export default function ForgotPasswordForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  
+
   const { sendPasswordResetEmail, isLoading: isSendingEmail, checkUsernameExists } = useAuth();
   const { toast } = useToast();
 
@@ -70,15 +70,9 @@ export default function ForgotPasswordForm() {
         return;
     }
 
-    // This function is a placeholder in useAuth and will show a toast.
-    // The actual email sending needs backend implementation.
-    await sendPasswordResetEmail(email); // Pass email to the simulation
+    // Pass the verified username along with the email for logging purposes
+    await sendPasswordResetEmail(email, username);
     // Toast for simulation is handled within sendPasswordResetEmail
-    // Potentially clear email or redirect, based on final design
-    // For now, we can leave it as is, or go back to username step / login
-    // setStep("enterUsername"); 
-    // setUsername('');
-    // setEmail('');
   };
 
   return (

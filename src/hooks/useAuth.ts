@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase'; 
+import { db } from '@/lib/firebase';
 import {
   collection,
   getDocs,
@@ -16,21 +16,30 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch,
-  getDoc, // Added getDoc for direct document access
+  getDoc,
+  updateDoc, // Added for updating activity log
+  arrayUnion, // Added for updating activity log
 } from 'firebase/firestore';
 import { initializeDefaultMedicines } from '@/lib/medicineService';
 
 
 const RXLOCAL_CURRENT_USER_USERNAME_KEY = 'rxlocal_currentUser_username_v3';
 
+export interface ActivityLogEntry {
+  timestamp: Timestamp;
+  action: string;
+  details?: string;
+}
+
 export interface UserData {
   username: string;
-  password?: string; 
+  password?: string;
   firstName: string;
   lastName: string;
   isAdmin?: boolean;
   createdAt?: Timestamp;
-  firestoreId?: string; 
+  firestoreId?: string; // This is the username, effectively the document ID in 'users' collection
+  activityLog?: ActivityLogEntry[];
 }
 
 export function useAuth() {
@@ -49,9 +58,15 @@ export function useAuth() {
     try {
       const userDocRef = doc(db, 'users', username.toLowerCase());
       const userDoc = await getDoc(userDocRef);
-      
+
       if (userDoc.exists()) {
-        return { firestoreId: userDoc.id, ...userDoc.data() } as UserData;
+        // Ensure activityLog is always an array, even if undefined in Firestore
+        const data = userDoc.data();
+        return {
+          firestoreId: userDoc.id,
+          ...data,
+          activityLog: data.activityLog || [], // Default to empty array
+        } as UserData;
       }
       return null;
     } catch (error) {
@@ -62,7 +77,7 @@ export function useAuth() {
   }, [toast]);
 
   const checkUsernameExists = useCallback(async (username: string): Promise<boolean> => {
-    if (!db || !username) return false; // Added check for username presence
+    if (!db || !username) return false;
     const userDocRef = doc(db, 'users', username.toLowerCase());
     const docSnap = await getDoc(userDocRef);
     return docSnap.exists();
@@ -86,13 +101,14 @@ export function useAuth() {
       const adminSnapshot = await getDoc(adminDocRef);
 
       if (!adminSnapshot.exists()) {
-        const adminUser: Omit<UserData, 'firestoreId'> = {
+        const adminUser: Omit<UserData, 'firestoreId' | 'password'> & {password: string} = { // Ensure password is part of the type for creation
           username: adminUsername,
-          password: 'admin123', 
+          password: 'admin123',
           firstName: 'Admin',
           lastName: 'BindGuard',
           isAdmin: true,
           createdAt: serverTimestamp() as Timestamp,
+          activityLog: [],
         };
         await setDoc(adminDocRef, adminUser);
         console.log(`Default admin user "${adminUsername}" created in Firestore.`);
@@ -118,7 +134,7 @@ export function useAuth() {
         setIsLoading(false);
         return;
     }
-    await initializeDefaultAdminAndData(); 
+    await initializeDefaultAdminAndData();
 
     try {
       const storedUsername = localStorage.getItem(RXLOCAL_CURRENT_USER_USERNAME_KEY);
@@ -171,7 +187,7 @@ export function useAuth() {
     try {
       const userDetails = await fetchUserDetails(usernameInput.toLowerCase());
 
-      if (userDetails && userDetails.password === passwordInput) { 
+      if (userDetails && userDetails.password === passwordInput) {
         localStorage.setItem(RXLOCAL_CURRENT_USER_USERNAME_KEY, userDetails.username);
         setCurrentUser(userDetails);
         setIsAuthenticated(true);
@@ -193,7 +209,7 @@ export function useAuth() {
     }
   }, [router, toast, fetchUserDetails]);
 
-  // Register now takes explicit username (which is auto-generated in the form)
+
   const register = useCallback(async (firstName?: string, lastName?: string, username?: string, password?: string) => {
     setIsLoading(true);
     if (!db) {
@@ -207,33 +223,25 @@ export function useAuth() {
       return;
     }
 
-    const targetUsername = username.trim().toLowerCase(); // Username is now passed directly
+    const targetUsername = username.trim().toLowerCase();
 
     try {
-      // The checkUsernameExists function is called from the form component before calling register.
-      // We could add a server-side check here too for extra safety, but the form's check should suffice for now.
-      // const existingUser = await fetchUserDetails(targetUsername); // This is already done by checkUsernameExists
-      // if (existingUser) {
-      //   toast({ title: "Error de Registro", description: "Este nombre de usuario ya existe. Por favor, elige otro.", variant: "destructive" });
-      //   setIsLoading(false);
-      //   return;
-      // }
-      
       const newUserDocRef = doc(collection(db, 'users'), targetUsername);
-      const newUser: Omit<UserData, 'firestoreId'> = {
+      const newUser: Omit<UserData, 'firestoreId' | 'password'> & { password: string } = {
         username: targetUsername,
-        password: password, 
+        password: password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        isAdmin: false, 
+        isAdmin: false,
         createdAt: serverTimestamp() as Timestamp,
+        activityLog: [], // Initialize activity log
       };
 
       await setDoc(newUserDocRef, newUser);
 
       const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
       toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}. Usuario: ${newUser.username}` });
-      router.push('/login'); 
+      router.push('/login');
 
     } catch (error) {
       console.error('Registration error:', error);
@@ -241,7 +249,7 @@ export function useAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, router]); // Removed fetchUserDetails as direct dependency here
+  }, [toast, router]);
 
 
   const logout = useCallback(() => {
@@ -278,14 +286,17 @@ export function useAuth() {
     try {
       const usersCollectionRef = collection(db, 'users');
       const usersSnapshot = await getDocs(usersCollectionRef);
-      const usersList = usersSnapshot.docs.map(docSnapshot => ({
-        firestoreId: docSnapshot.id, 
-        username: docSnapshot.data().username,
-        firstName: docSnapshot.data().firstName,
-        lastName: docSnapshot.data().lastName,
-        isAdmin: docSnapshot.data().isAdmin || false,
-        // Do not return password here
-      } as UserData));
+      const usersList = usersSnapshot.docs.map(docSnapshot => {
+        const data = docSnapshot.data();
+        return {
+            firestoreId: docSnapshot.id,
+            username: data.username,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            isAdmin: data.isAdmin || false,
+            activityLog: data.activityLog || [], // Ensure activityLog is an array
+        } as UserData
+      });
       return usersList;
     } catch (error: any) {
       console.error("Error fetching users from Firestore in hook:", error);
@@ -309,17 +320,40 @@ export function useAuth() {
     } catch (error) {
       console.error('Error deleting user from Firestore:', error);
       toast({ title: 'Error al Eliminar', description: 'No se pudo eliminar el usuario de Firestore.', variant: 'destructive' });
-      throw error; 
+      throw error;
     }
   };
 
-  const sendPasswordResetEmail = async (email: string): Promise<void> => {
-    console.warn(`Simulating password reset email to: ${email}. This requires backend implementation.`);
+  const sendPasswordResetEmail = async (email: string, usernameForLog: string): Promise<void> => {
+    // This is still a simulation as we don't have a backend for actual email sending.
+    console.warn(`Simulating password reset email to: ${email} for user ${usernameForLog}. This requires backend implementation.`);
     toast({
       title: "Simulación de Recuperación",
-      description: `Si ${email} está registrado, se enviaría un enlace de recuperación (funcionalidad no implementada).`,
+      description: `Si ${email} está registrado y asociado a ${usernameForLog}, se enviaría un enlace (funcionalidad no implementada).`,
       duration: 5000,
     });
+
+    // Log this attempt to user's activityLog
+    if (db && usernameForLog) {
+      try {
+        const userDocRef = doc(db, 'users', usernameForLog.toLowerCase());
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+           const newLogEntry: ActivityLogEntry = {
+            timestamp: serverTimestamp() as Timestamp,
+            action: 'Intento de Reseteo de Contraseña',
+            details: `Solicitado para el correo: ${email} (Simulado)`,
+          };
+          await updateDoc(userDocRef, {
+            activityLog: arrayUnion(newLogEntry)
+          });
+        } else {
+          console.warn(`sendPasswordResetEmail: User ${usernameForLog} not found in Firestore to log activity.`);
+        }
+      } catch (error) {
+        console.error(`Error logging password reset attempt for ${usernameForLog}:`, error);
+      }
+    }
     return Promise.resolve();
   };
 
@@ -332,9 +366,9 @@ export function useAuth() {
     login,
     register,
     logout,
-    getCurrentUserUsername, 
-    getCurrentUserDetails, 
-    fetchUserDetails, 
+    getCurrentUserUsername,
+    getCurrentUserDetails,
+    fetchUserDetails,
     getUsersFromFirestore,
     deleteUserFromFirestore,
     checkUsernameExists,
