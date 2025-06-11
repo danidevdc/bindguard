@@ -64,6 +64,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [isScanningQR, setIsScanningQR] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isCameraStreamActive, setIsCameraStreamActive] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
@@ -157,16 +158,20 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     console.error('DEBUG: QR Scan Error/Event:', error); 
      if (typeof error === 'object' && error !== null && 'message' in error) {
         if ((error as Error).message === 'No QR code found') {
+            // This is a common event, not necessarily an error to show to user repeatedly
             return; 
         }
     } else if (typeof error === 'string' && error === 'No QR code found') {
         return; 
     }
+    // For other errors, you might want to inform the user or log more verbosely
+    // For now, just console.error
   };
 
   useEffect(() => {
     if (isScanningQR) {
       const startScanner = async () => {
+        setIsCameraStreamActive(false); // Reset before attempt
         if (!videoRef.current) {
           console.log("DEBUG: Video element not available for scanner.");
           return;
@@ -184,8 +189,13 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
           setHasCameraPermission(true);
           videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(e => console.error("DEBUG: Environment video play failed:", e));
-          console.log("DEBUG: Environment camera stream started.");
+          await videoRef.current.play().catch(e => {
+            console.error("DEBUG: Environment video play failed:", e);
+            setIsCameraStreamActive(false);
+            throw e; // Re-throw to be caught by the main try-catch
+          });
+          setIsCameraStreamActive(true);
+          console.log("DEBUG: Environment camera stream started and playing.");
 
           qrScannerRef.current = new QrScanner(
             videoRef.current,
@@ -201,14 +211,20 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           console.log("DEBUG: QR Scanner started with environment camera.");
         } catch (error: any) {
           console.error('DEBUG: Error accessing environment camera or starting scanner:', error);
+          setIsCameraStreamActive(false);
           try { 
             console.log("DEBUG: Attempting to get fallback camera (any).");
             let fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
             if (videoRef.current) {
                 videoRef.current.srcObject = fallbackStream;
-                await videoRef.current.play().catch(e => console.error("DEBUG: Fallback video play failed:", e));
-                console.log("DEBUG: Fallback camera stream started.");
+                await videoRef.current.play().catch(e => {
+                    console.error("DEBUG: Fallback video play failed:", e);
+                    setIsCameraStreamActive(false);
+                    throw e; // Re-throw
+                });
+                setIsCameraStreamActive(true);
+                console.log("DEBUG: Fallback camera stream started and playing.");
                 
                 qrScannerRef.current = new QrScanner(
                     videoRef.current,
@@ -225,6 +241,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           } catch (fallbackError: any) {
              console.error('DEBUG: Fallback camera access error:', fallbackError);
              setHasCameraPermission(false);
+             setIsCameraStreamActive(false);
              toast({
                 variant: 'destructive',
                 title: 'Acceso a Cámara Denegado',
@@ -248,6 +265,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         stream.getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
       }
+      setIsCameraStreamActive(false);
     }
 
     return () => { 
@@ -262,6 +280,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         stream.getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
       }
+      setIsCameraStreamActive(false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isScanningQR]);
@@ -423,6 +442,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
+    // This stock update is local to the component state for immediate feedback.
+    // The actual DB stock will be updated upon final prescription confirmation.
     if (identifiedMedicineStock !== null) {
         setIdentifiedMedicineStock(identifiedMedicineStock - quantityNum);
     }
@@ -440,6 +461,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       setManualCodeInputValue('');
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
+      // Do NOT reset identifiedMedicineStock here if we want to show temporarily reduced stock from current prescription.
+      // If we want to re-fetch stock for the *next* medicine, this is fine.
+      // For now, we assume each scanned item is a *new* item, so resetting stock for the "form" is ok.
       setIdentifiedMedicineStock(null);
       setCurrentQuantity('');
       setStep("identifyMedicine");
@@ -448,22 +472,26 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
   const handleGoToReviewFromQuantity = () => {
     let itemAddedSuccessfully = false;
+    // If there's a medicine identified and a quantity, try to add it
     if (identifiedMedicineCode && identifiedMedicineName && currentQuantity.trim()) {
         itemAddedSuccessfully = addCurrentMedicineToList();
-        if (!itemAddedSuccessfully) return; 
+        if (!itemAddedSuccessfully) return; // Stop if adding fails (e.g. stock issue)
     } else if (medicinesInPrescription.length === 0) {
+        // If no current item to add AND no items in prescription yet
         toast({ title: "Receta Vacía", description: "Añade al menos un medicamento válido para revisar.", variant: "destructive" });
         return;
     }
+    // If item was added OR if there are already items (and no new one to add now)
     if (itemAddedSuccessfully || medicinesInPrescription.length > 0) {
         setCurrentScannedCode('');
         setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
-        setIdentifiedMedicineStock(null);
+        setIdentifiedMedicineStock(null); // Reset for next potential scan in identifyMedicine step
         setCurrentQuantity('');
         setStep("reviewPrescription");
     } else { 
+        // This case should be rare if above logic is correct, but as a fallback
         toast({ title: "Receta Vacía", description: "Añade al menos un medicamento para finalizar.", variant: "destructive" });
     }
   };
@@ -487,7 +515,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       setMedicinesInPrescription(prevMeds =>
         prevMeds.map(med => med.id === medicineEntryId ? { ...med, quantity: 0 } : med)
       );
-      if (newQuantityStr !== "") {
+      if (newQuantityStr !== "") { // Only toast if it wasn't intentionally cleared
          toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número positivo mayor a 0.", variant: "destructive" });
       }
       return;
@@ -497,6 +525,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número.", variant: "destructive" });
         return;
     }
+    // Here, we don't re-check stock against DB, assuming initial add was valid.
+    // A more complex system might re-validate here or on final confirm.
     setMedicinesInPrescription(prevMeds =>
       prevMeds.map(med => med.id === medicineEntryId ? { ...med, quantity: newQuantity } : med)
     );
@@ -521,8 +551,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         }
 
         let allUpdatesSuccessful = true;
+        const batchErrors: string[] = [];
+
         for (const med of medicinesInPrescription) {
             try {
+                // Re-fetch current stock before dispensing in case it changed.
+                // This is a good practice for a more robust system, though adds DB reads.
+                // For simplicity, we can rely on the stock check done when adding item to list.
+                // Let's proceed with the update.
                 await updateMedicineStockInFirestore(
                     med.code,
                     med.quantity,
@@ -530,24 +566,25 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                     prescriptionNumber,
                     currentUsername,
                     Timestamp.fromDate(recipeDate)
-                    // Expiration date is not relevant for dispensing
+                    // Expiration date is not relevant for dispensing from this form's perspective
                 );
             } catch (error: any) {
                 allUpdatesSuccessful = false;
-                toast({
-                    title: `Error al dispensar ${med.name}`,
-                    description: error.message || "No se pudo actualizar el stock de este medicamento.",
-                    variant: "destructive"
-                });
-                // Decide if you want to stop on first error or try to process others
-                // For now, it continues
+                const errorMessage = error.message || "No se pudo actualizar el stock de este medicamento.";
+                batchErrors.push(`Error al dispensar ${med.name}: ${errorMessage}`);
+                console.error(`Error updating stock for ${med.name} (ID: ${med.code}):`, error);
             }
         }
 
         if (allUpdatesSuccessful) {
             toast({ title: "Receta Confirmada y Procesada", description: `Receta Nº ${prescriptionNumber} actualizada en la base de datos.` });
         } else {
-            toast({ title: "Receta Procesada Parcialmente", description: `Algunos medicamentos de la Receta Nº ${prescriptionNumber} no pudieron ser actualizados. Revisa el inventario.`, variant: "destructive" });
+            toast({ 
+                title: "Receta Procesada con Errores", 
+                description: `Algunos medicamentos de la Receta Nº ${prescriptionNumber} no pudieron ser actualizados. ${batchErrors.join(' ')} Revisa el inventario.`, 
+                variant: "destructive",
+                duration: 10000 // Longer duration for error messages
+            });
         }
 
     } else { // Cancelled
@@ -566,6 +603,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setMedicinesInPrescription([]);
     setIsScanningQR(false);
     setHasCameraPermission(null);
+    setIsCameraStreamActive(false);
     setShowVerificationDialog(false);
     router.push('/dashboard');
   };
@@ -632,12 +670,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                       <AlertDescription>Habilita los permisos de cámara para escanear.</AlertDescription>
                     </Alert>
                   )}
-                  {hasCameraPermission === null && !videoRef.current?.srcObject && (
+                  {hasCameraPermission === null && !isCameraStreamActive && (
                     <p className="text-sm text-muted-foreground mt-2 text-center">Iniciando cámara...</p>
                   )}
-                  {hasCameraPermission === true && videoRef.current?.srcObject && (
+                  {hasCameraPermission === true && (
                       <p className="text-sm text-muted-foreground mt-2 text-center">
-                        Apunta la cámara al código QR. Asegura buena iluminación, enfoque y que el QR esté centrado. Las guías amarillas aparecerán al detectar.
+                        {isCameraStreamActive ? "Cámara activa. " : "Estableciendo conexión con cámara... "}
+                        Apunta la cámara al código QR. Asegura buena iluminación, enfoque y que el QR esté centrado.
+                        Las guías amarillas aparecerán al detectar un QR.
                       </p>
                   )}
                 </div>
