@@ -18,8 +18,9 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { type Medicine, getMedicineByIdFromFirestore } from '@/lib/medicineService'; // Updated import
+import { type Medicine, getMedicineByIdFromFirestore, updateMedicineStockInFirestore } from '@/lib/medicineService';
 import QrScanner from 'qr-scanner';
+import { Timestamp } from 'firebase/firestore';
 
 interface MedicineForPrescription {
   id: string; 
@@ -102,11 +103,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
  const handleQrScanSuccess = (result: QrScanner.ScanResult | string) => {
     const scannedData = typeof result === 'string' ? result : result.data;
     console.log('DEBUG: QR Scan Successful. Raw Data:', scannedData);
-    // Temporary toast for immediate feedback that scan occurred
-    // You might want to remove this toast in production or make it conditional (e.g., via a debug flag)
+    
     toast({
         title: "QR Detectado (Debug)",
-        description: `Dato crudo: ${scannedData.substring(0, 50)}...`, // Show first 50 chars
+        description: `Dato crudo: ${scannedData.substring(0, 50)}...`,
         duration: 5000 
     });
     
@@ -124,11 +124,11 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                 medicineNameFromQR = parsedData.nombre;
             }
         } else { 
-            codeFromQR = scannedData; // Fallback if not expected JSON
+            codeFromQR = scannedData; 
              console.warn('DEBUG: QR data is not the expected JSON format or does not have an id field. Treating as raw ID.');
         }
     } catch (e) { 
-        codeFromQR = scannedData; // Fallback if JSON.parse fails
+        codeFromQR = scannedData; 
         console.warn('DEBUG: QR data is not valid JSON. Treating as raw ID.', e);
     }
 
@@ -154,20 +154,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 
   const handleQrScanError = (error: Error | string) => {
-    console.error('DEBUG: QR Scan Error/Event:', error); // Log all errors/events from scanner
+    console.error('DEBUG: QR Scan Error/Event:', error); 
      if (typeof error === 'object' && error !== null && 'message' in error) {
         if ((error as Error).message === 'No QR code found') {
-            // This message is frequent when no QR is in view, so we don't toast for it
-            // but it's good to log it for debugging if needed.
-            // console.log('DEBUG: No QR code found in current frame.');
             return; 
         }
     } else if (typeof error === 'string' && error === 'No QR code found') {
-        // console.log('DEBUG: No QR code found in current frame.');
         return; 
     }
-    // For other errors, you might want to inform the user or log more verbosely.
-    // toast({ title: "Error de Escaneo", description: `Detalle: ${String(error)}`, variant: "destructive" });
   };
 
   useEffect(() => {
@@ -386,7 +380,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
         setIdentifiedMedicineStock(null);
-        setHasCameraPermission(null); // Reset permission status to allow re-check
+        setHasCameraPermission(null); 
     }
   };
   
@@ -429,22 +423,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
-    // Actualizar el stock localmente para reflejar la cantidad reservada
     if (identifiedMedicineStock !== null) {
         setIdentifiedMedicineStock(identifiedMedicineStock - quantityNum);
     }
 
-
-    // Log simulado - la actualización real del stock en Firestore se hará al confirmar la receta
-    console.log('Simulating inventory update for dispensing (will happen on confirm):', {
-        date: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
-        prescriptionNumber: prescriptionNumber,
-        quantity: quantityNum,
-        medicineName: identifiedMedicineName,
-        medicineCode: identifiedMedicineCode, 
-        mode: 'dispensing',
-        userName: getCurrentUserUsername() || 'System',
-    });
     toast({
       title: "Medicamento Añadido a Receta",
       description: `${identifiedMedicineName} (Cód: ${identifiedMedicineCode}), Cant: ${quantityNum}.`,
@@ -515,8 +497,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número.", variant: "destructive" });
         return;
     }
-    // Aquí no podemos validar contra el stock total porque no lo tenemos para todos los items en revisión.
-    // Se validará al confirmar la receta.
     setMedicinesInPrescription(prevMeds =>
       prevMeds.map(med => med.id === medicineEntryId ? { ...med, quantity: newQuantity } : med)
     );
@@ -527,26 +507,54 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     toast({ title: "Medicamento Eliminado", description: "El medicamento ha sido eliminado de la lista de revisión." });
   };
 
-  const finalizeAndRedirect = (action: "confirmed" | "cancelled") => {
+  const finalizeAndRedirect = async (action: "confirmed" | "cancelled") => {
+    const currentUsername = getCurrentUserUsername() || 'System';
+
     if (action === "confirmed") {
         if (medicinesInPrescription.some(med => med.quantity <= 0)) {
             toast({ title: "Cantidades Inválidas", description: "Asegúrate que todos los medicamentos tengan una cantidad válida (mayor a 0).", variant: "destructive" });
             return;
         }
-        // Aquí es donde se debería hacer la actualización real en Firestore
-        // Por ahora, solo se simula el log.
-        console.log("Prescription Confirmed (SIMULATED - NO DB UPDATE YET):", {
-            prescriptionNumber,
-            recipeDate: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
-            items: medicinesInPrescription,
-            dispensedBy: getCurrentUserUsername() || 'System',
-            finalizedAt: new Date().toISOString(),
-        });
-        toast({ title: "Receta Confirmada", description: `Receta Nº ${prescriptionNumber} procesada (simulado - sin actualización de BD aún).`, variant: "default" });
-    } else {
-        toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} ha sido cancelada.`, variant: "default" });
+        if (!recipeDate) {
+            toast({ title: "Fecha de Receta Requerida", description: "Por favor, selecciona una fecha para la receta antes de confirmar.", variant: "destructive"});
+            return;
+        }
+
+        let allUpdatesSuccessful = true;
+        for (const med of medicinesInPrescription) {
+            try {
+                await updateMedicineStockInFirestore(
+                    med.code,
+                    med.quantity,
+                    'dispensed',
+                    prescriptionNumber,
+                    currentUsername,
+                    Timestamp.fromDate(recipeDate)
+                    // Expiration date is not relevant for dispensing
+                );
+            } catch (error: any) {
+                allUpdatesSuccessful = false;
+                toast({
+                    title: `Error al dispensar ${med.name}`,
+                    description: error.message || "No se pudo actualizar el stock de este medicamento.",
+                    variant: "destructive"
+                });
+                // Decide if you want to stop on first error or try to process others
+                // For now, it continues
+            }
+        }
+
+        if (allUpdatesSuccessful) {
+            toast({ title: "Receta Confirmada y Procesada", description: `Receta Nº ${prescriptionNumber} actualizada en la base de datos.` });
+        } else {
+            toast({ title: "Receta Procesada Parcialmente", description: `Algunos medicamentos de la Receta Nº ${prescriptionNumber} no pudieron ser actualizados. Revisa el inventario.`, variant: "destructive" });
+        }
+
+    } else { // Cancelled
+        toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} ha sido cancelada. No se guardaron cambios.` });
     }
 
+    // Reset state and redirect
     setPrescriptionNumber('');
     setRecipeDate(clientNow || new Date());
     setCurrentScannedCode('');
@@ -629,7 +637,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                   )}
                   {hasCameraPermission === true && videoRef.current?.srcObject && (
                       <p className="text-sm text-muted-foreground mt-2 text-center">
-                        Apunta la cámara al código QR. Asegura buena iluminación y enfoque.
+                        Apunta la cámara al código QR. Asegura buena iluminación, enfoque y que el QR esté centrado. Las guías amarillas aparecerán al detectar.
                       </p>
                   )}
                 </div>
@@ -862,3 +870,4 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
+
