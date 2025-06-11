@@ -41,47 +41,23 @@ export interface Medicine {
 
 export const mockMedicinesForFirestore: Omit<Medicine, 'lastUpdated' | 'dispensingHistory'> & { dispensingHistory: Omit<DispensingRecord, 'date' | 'expirationDate' | 'id'> & { id?: string, date: string, expirationDate?: string}[] }[] = [
   {
-    id: 'MED001',
-    name: 'Amoxicillin 250mg Capsules',
-    presentation: 'Capsules',
-    description: 'Broad-spectrum antibiotic',
-    currentStock: 0,
-    isBlocked: false, 
-    dispensingHistory: [
-      { id: 'hist000_init_MED001', date: '2024-07-20', rxNumber: 'alm765', quantity: 100, type: 'stocked', userName: 'laura.perez', expirationDate: '2025-12-31' },
-    ],
-  },
-  {
-    id: 'MED002',
-    name: 'Paracetamol 500mg Tablets',
-    presentation: 'Tablets',
-    description: 'Analgesic and antipyretic',
-    currentStock: 0,
-    isBlocked: false,
-    dispensingHistory: [
-      { id: 'hist000_init_MED002', date: '2024-07-24', rxNumber: 'alm123', quantity: 200, type: 'stocked', userName: 'juan.diaz', expirationDate: '2025-10-31' },
-    ],
-  },
-  {
     id: 'MED003',
     name: 'Lisinopril 10mg Tablets',
     presentation: 'Tablets',
     description: 'ACE inhibitor for hypertension',
-    currentStock: 0,
+    currentStock: 143, // Calculated: 100-10-5+50-15-8+30-12-7+20 = 143
     isBlocked: false,
     dispensingHistory: [
-       { id: 'hist007_init_MED003', date: '2024-07-20', rxNumber: 'alm003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
-    ],
-  },
-    {
-    id: 'A0202',
-    name: 'Omeprazol 20mg',
-    presentation: 'Capsules',
-    description: 'Proton pump inhibitor',
-    currentStock: 0,
-    isBlocked: false,
-    dispensingHistory: [
-       { id: 'hist_A0202_init', date: '2024-07-01', rxNumber: 'alm_A0202', quantity: 500, type: 'stocked', userName: 'admin.admin', expirationDate: '2026-01-01' },
+       { id: 'hist_med003_01', date: '2024-07-20', rxNumber: 'alm003', quantity: 100, type: 'stocked', userName: 'elena.sanchez', expirationDate: '2025-07-31' },
+       { id: 'hist_med003_02', date: '2024-07-21', rxNumber: 'RX7001', quantity: 10, type: 'dispensed', userName: 'ana.lopez' },
+       { id: 'hist_med003_03', date: '2024-07-22', rxNumber: 'RX7002', quantity: 5, type: 'dispensed', userName: 'carlos.ruiz' },
+       { id: 'hist_med003_04', date: '2024-07-23', rxNumber: 'alm004', quantity: 50, type: 'stocked', userName: 'admin.admin', expirationDate: '2026-01-15' },
+       { id: 'hist_med003_05', date: '2024-07-24', rxNumber: 'RX7003', quantity: 15, type: 'dispensed', userName: 'sofia.martin' },
+       { id: 'hist_med003_06', date: '2024-07-25', rxNumber: 'RX7004', quantity: 8, type: 'dispensed', userName: 'ana.lopez' },
+       { id: 'hist_med003_07', date: '2024-07-26', rxNumber: 'alm005', quantity: 30, type: 'stocked', userName: 'juan.diaz', expirationDate: '2026-06-30' },
+       { id: 'hist_med003_08', date: '2024-07-27', rxNumber: 'RX7005', quantity: 12, type: 'dispensed', userName: 'carlos.ruiz' },
+       { id: 'hist_med003_09', date: '2024-07-28', rxNumber: 'RX7006', quantity: 7, type: 'dispensed', userName: 'sofia.martin' },
+       { id: 'hist_med003_10', date: '2024-07-29', rxNumber: 'alm006', quantity: 20, type: 'stocked', userName: 'admin.admin', expirationDate: '2026-12-31' },
     ],
   }
 ];
@@ -100,11 +76,8 @@ export async function initializeDefaultMedicines(): Promise<void> {
       mockMedicinesForFirestore.forEach(medMock => {
         const medDocRef = doc(medicinesRef, medMock.id);
         
-        let initialStock = 0;
+        let calculatedStock = 0; // This will use the pre-calculated stock from the mock
         const historyForFirestore: DispensingRecord[] = medMock.dispensingHistory.map((h, index) => {
-          if (h.type === 'stocked') initialStock += h.quantity;
-          else if (h.type === 'dispensed') initialStock -= h.quantity;
-
           return {
             ...h,
             id: h.id || `hist_init_${medMock.id}_${index}_${Date.now()}`,
@@ -118,15 +91,17 @@ export async function initializeDefaultMedicines(): Promise<void> {
           name: medMock.name,
           presentation: medMock.presentation,
           description: medMock.description || '',
-          currentStock: initialStock, 
+          currentStock: medMock.currentStock, // Use the pre-calculated stock
           lastUpdated: serverTimestamp() as Timestamp,
           dispensingHistory: historyForFirestore,
-          isBlocked: medMock.isBlocked !== undefined ? medMock.isBlocked : false, // Ensure isBlocked is set
+          isBlocked: medMock.isBlocked !== undefined ? medMock.isBlocked : false,
         };
         batch.set(medDocRef, medicineData);
       });
       await batch.commit();
-      console.log('Default medicines (mockMedicinesForFirestore) created in Firestore.');
+      console.log('Default medicines (mockMedicinesForFirestore) created/updated in Firestore.');
+    } else {
+        console.log('Firestore "medicines" collection is not empty. Default medicines will not be re-initialized from mocks unless the collection is cleared manually.');
     }
   } catch (error) {
     console.error('Error initializing default medicines in Firestore:', error);
@@ -284,3 +259,4 @@ export async function updateMedicineBlockedStatus(medicineId: string, isBlocked:
     lastUpdated: serverTimestamp()
   });
 }
+
