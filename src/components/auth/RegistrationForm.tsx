@@ -34,7 +34,7 @@ const getStrengthColor = (strength: number) => {
 export default function RegistrationForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState(''); // User can now suggest a username
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,6 +42,7 @@ export default function RegistrationForm() {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   const { register, isLoading, checkUsernameExists } = useAuth();
   const { toast } = useToast();
@@ -68,9 +69,52 @@ export default function RegistrationForm() {
     };
   }, [username, checkUsernameExists]);
 
+  // Validate form for button disable state
+  useEffect(() => {
+    const allFieldsFilled =
+      firstName.trim() !== '' &&
+      lastName.trim() !== '' &&
+      username.trim() !== '' &&
+      password !== '' &&
+      confirmPassword !== '';
+    const passwordsMatch = password === confirmPassword;
+    const usernameIsAvailable = usernameAvailable === true;
+    const passwordIsStrongEnough = passwordStrength >= 50;
+
+    setIsFormValid(
+      allFieldsFilled &&
+      passwordsMatch &&
+      usernameIsAvailable &&
+      !usernameCheckLoading &&
+      passwordIsStrongEnough &&
+      !isLoading // Also consider global loading state
+    );
+  }, [
+    firstName,
+    lastName,
+    username,
+    password,
+    confirmPassword,
+    usernameAvailable,
+    usernameCheckLoading,
+    passwordStrength,
+    isLoading
+  ]);
+
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    // Re-check conditions for safety, though button state should prevent this
+    if (!isFormValid) {
+       toast({
+        title: "Error de Registro",
+        description: "Por favor, completa y corrige todos los campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Redundant checks (already handled by isFormValid for button state, but good as a safeguard)
     if (!firstName || !lastName || !username || !password || !confirmPassword) {
       toast({
         title: "Error de Registro",
@@ -87,7 +131,7 @@ export default function RegistrationForm() {
       });
       return;
     }
-    if (passwordStrength < 50) { // Arbitrary threshold for minimum strength
+    if (passwordStrength < 50) { 
         toast({
             title: "Contraseña Débil",
             description: "Por favor, elige una contraseña más segura.",
@@ -230,7 +274,11 @@ export default function RegistrationForm() {
             <span className="font-semibold">Nota de seguridad:</span> Este es un sistema de demostración. En una aplicación real, las contraseñas se almacenarían de forma segura (hashed). Aquí se almacenan directamente para simplificar, lo cual <span className="text-destructive font-medium">no es seguro para producción</span>.
           </p>
 
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading || usernameCheckLoading || usernameAvailable === false}>
+          <Button 
+            type="submit" 
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+            disabled={!isFormValid || isLoading}
+          >
             <UserPlus className="mr-2 h-5 w-5" />
             {isLoading ? 'Registrando...' : 'Crear Cuenta'}
           </Button>
@@ -245,3 +293,6 @@ export default function RegistrationForm() {
     </Card>
   );
 }
+
+
+    
