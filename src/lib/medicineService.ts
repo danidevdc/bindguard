@@ -137,7 +137,7 @@ export async function getMedicinesFromFirestore(): Promise<Medicine[]> {
 export async function getMedicineByIdFromFirestore(id: string): Promise<Medicine | null> {
   if (!db) throw new Error("Firestore not initialized");
   if (!id) return null; // Prevent querying with empty ID
-  const medDocRef = doc(db, 'medicines', id);
+  const medDocRef = doc(db, 'medicines', id.toUpperCase()); // Ensure ID is uppercase for lookup
   const docSnap = await getDoc(medDocRef);
   if (docSnap.exists()) {
     return { ...docSnap.data(), id: docSnap.id } as Medicine;
@@ -218,6 +218,26 @@ export async function deleteMedicineFromFirestore(medicineId: string): Promise<v
   if (!db) throw new Error("Firestore not initialized");
   const medDocRef = doc(db, 'medicines', medicineId);
   await deleteDoc(medDocRef);
+}
+
+
+export async function updateMedicineDetailsInFirestore(
+  medicineId: string,
+  newName: string,
+  newPresentation: string
+): Promise<void> {
+  if (!db) {
+    throw new Error("Firestore not initialized. Cannot update medicine details.");
+  }
+  if (!medicineId || !newName.trim() || !newPresentation.trim()) {
+    throw new Error("ID del medicamento, nuevo nombre y nueva presentación son requeridos para actualizar.");
+  }
+  const medDocRef = doc(db, 'medicines', medicineId); // ID is already uppercase from search
+  await updateDoc(medDocRef, {
+    name: newName.trim(),
+    presentation: newPresentation.trim(),
+    lastUpdated: serverTimestamp()
+  });
 }
 
 // This function is DEPRECATED as AddMedicinePage now uses createCompleteMedicineInFirestore

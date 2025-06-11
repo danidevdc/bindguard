@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, PackagePlus, Edit3, LockKeyhole, FileX2, Settings, PillBottle, Users } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Edit3, LockKeyhole, FileX2, Settings, PillBottle, Users } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -77,16 +77,12 @@ export default function AdminPage() {
                     Añadir Medicamento
                   </Button>
                 </Link>
-                 <Link href="/stock-entry" passHref legacyBehavior>
+                <Link href="/admin/edit-medicine" passHref legacyBehavior>
                   <Button variant="outline" className="w-full justify-start text-base py-6">
-                    <PackagePlus className="mr-3 h-6 w-6 text-accent" />
-                    Añadir Stock (Lote Existente)
+                    <Edit3 className="mr-3 h-6 w-6 text-blue-600" />
+                    Editar Medicamentos
                   </Button>
                 </Link>
-                <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Editar Medicamentos')}>
-                  <Edit3 className="mr-3 h-6 w-6 text-green-600" />
-                  Editar Medicamentos
-                </Button>
                 <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Gestionar Lotes (Bloquear/Editar Vencimiento)')}>
                   <LockKeyhole className="mr-3 h-6 w-6 text-destructive" />
                   Gestionar Lotes (Bloquear/Editar Vencimiento)
