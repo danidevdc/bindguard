@@ -30,7 +30,7 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-primary bg-background text-primary", // Changed for green border and text
+        default: "border-accent bg-background/70 backdrop-blur-sm text-accent", // Changed for blue border/text and glassmorphism
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
       },
@@ -79,7 +79,7 @@ const ToastClose = React.forwardRef<
     ref={ref}
     className={cn(
       "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
-      "group-[.default]:text-primary/50 group-[.default]:hover:text-primary", // Adjust close button color for default variant
+      "group-[.default]:text-accent/50 group-[.default]:hover:text-accent", // Adjust close button color for default variant
       className
     )}
     toast-close=""
