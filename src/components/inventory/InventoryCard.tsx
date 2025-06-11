@@ -334,7 +334,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   nombre: qrDialogMedicine.name,
                   presentacion: qrDialogMedicine.presentation,
                 })}
-                size={200}
+                size={240} // Increased size
                 bgColor={"#ffffff"}
                 fgColor={"#000000"}
                 level={"L"}
