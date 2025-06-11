@@ -76,14 +76,21 @@ export async function initializeDefaultMedicines(): Promise<void> {
       mockMedicinesForFirestore.forEach(medMock => {
         const medDocRef = doc(medicinesRef, medMock.id);
         
-        // No need to recalculate stock here if mock already has it correct
         const historyForFirestore: DispensingRecord[] = medMock.dispensingHistory.map((h, index) => {
-          return {
-            ...h,
-            id: h.id || `hist_init_${medMock.id}_${index}_${Date.now()}`, // Ensure ID for history records
+          const record: any = {
+            id: h.id || `hist_init_${medMock.id}_${index}_${Date.now()}`,
             date: Timestamp.fromDate(new Date(h.date)),
-            expirationDate: h.expirationDate ? Timestamp.fromDate(new Date(h.expirationDate)) : undefined,
+            rxNumber: h.rxNumber,
+            quantity: h.quantity,
+            type: h.type,
           };
+          if (h.userName) {
+            record.userName = h.userName;
+          }
+          if (h.expirationDate) {
+            record.expirationDate = Timestamp.fromDate(new Date(h.expirationDate));
+          }
+          return record as DispensingRecord;
         });
 
         const medicineData: Medicine = {
@@ -91,7 +98,7 @@ export async function initializeDefaultMedicines(): Promise<void> {
           name: medMock.name,
           presentation: medMock.presentation,
           description: medMock.description || '',
-          currentStock: medMock.currentStock, // Use the pre-calculated stock from the mock
+          currentStock: medMock.currentStock,
           lastUpdated: serverTimestamp() as Timestamp,
           dispensingHistory: historyForFirestore,
           isBlocked: medMock.isBlocked !== undefined ? medMock.isBlocked : false,
@@ -117,7 +124,7 @@ export async function getMedicinesFromFirestore(): Promise<Medicine[]> {
     return { 
       ...data, 
       id: doc.id, 
-      isBlocked: data.isBlocked || false // Ensure isBlocked exists
+      isBlocked: data.isBlocked || false 
     } as Medicine;
   });
 }
@@ -132,7 +139,7 @@ export async function getMedicineByIdFromFirestore(id: string): Promise<Medicine
     return { 
       ...data, 
       id: docSnap.id,
-      isBlocked: data.isBlocked || false // Ensure isBlocked exists
+      isBlocked: data.isBlocked || false 
     } as Medicine;
   }
   return null;
@@ -146,9 +153,9 @@ export async function createCompleteMedicineInFirestore(medicineData: Medicine):
     throw new Error("Invalid medicine data or ID missing for saving to Firestore.");
   }
   const medDocRef = doc(db, 'medicines', medicineData.id);
-  // Ensure isBlocked is part of the data being set, defaulting to false if not provided
-  const dataToSet = {
+  const dataToSet: Medicine = {
     ...medicineData,
+    lastUpdated: serverTimestamp() as Timestamp, // Ensure lastUpdated is set
     isBlocked: medicineData.isBlocked !== undefined ? medicineData.isBlocked : false,
   };
   await setDoc(medDocRef, dataToSet);
@@ -160,7 +167,7 @@ export async function updateMedicineStockInFirestore(
   quantityChange: number,
   transactionType: 'dispensed' | 'stocked',
   rxNumber: string,
-  userName: string,
+  userName: string | null, // Allow null for userName
   transactionDate: Timestamp,
   expirationDateForStock?: Timestamp 
 ): Promise<void> {
@@ -183,7 +190,6 @@ export async function updateMedicineStockInFirestore(
          throw new Error(`El medicamento "${medicineData.name}" está cerrado y no se puede dispensar.`);
       }
 
-
       let newStock = medicineData.currentStock;
 
       if (transactionType === 'dispensed') {
@@ -198,15 +204,31 @@ export async function updateMedicineStockInFirestore(
         }
       }
 
-      const newRecord: DispensingRecord = {
+      // Build the record object carefully
+      const recordDataObject: {
+        id: string;
+        date: Timestamp;
+        rxNumber: string;
+        quantity: number;
+        type: 'dispensed' | 'stocked';
+        userName?: string;
+        expirationDate?: Timestamp;
+      } = {
         id: `${transactionType}_${medicineId}_${Date.now()}`,
         date: transactionDate, 
-        rxNumber,
+        rxNumber: rxNumber,
         quantity: quantityChange,
         type: transactionType,
-        userName,
-        expirationDate: transactionType === 'stocked' ? expirationDateForStock : undefined, 
       };
+
+      if (userName) { // Only add userName if it's a non-empty string
+        recordDataObject.userName = userName;
+      }
+      if (transactionType === 'stocked' && expirationDateForStock) {
+        recordDataObject.expirationDate = expirationDateForStock;
+      }
+      
+      const newRecord = recordDataObject as DispensingRecord;
       
       transaction.update(medDocRef, {
         currentStock: newStock,
@@ -259,3 +281,4 @@ export async function updateMedicineBlockedStatus(medicineId: string, isBlocked:
     lastUpdated: serverTimestamp()
   });
 }
+
