@@ -18,7 +18,7 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { getStoredMedicines, type Medicine } from '@/lib/placeholder-data';
+import { type Medicine, getMedicineByIdFromFirestore } from '@/lib/medicineService'; // Updated import
 import QrScanner from 'qr-scanner';
 
 interface MedicineForPrescription {
@@ -46,9 +46,11 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [recipeDate, setRecipeDate] = useState<Date | undefined>(undefined);
 
   const [currentScannedCode, setCurrentScannedCode] = useState(''); 
-  const [manualCodeInputValue, setManualCodeInputValue] = useState(''); // For manual input
+  const [manualCodeInputValue, setManualCodeInputValue] = useState(''); 
   const [identifiedMedicineName, setIdentifiedMedicineName] = useState(''); 
-  const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState(''); 
+  const [identifiedMedicineCode, setIdentifiedMedicineCode] = useState('');
+  const [identifiedMedicineStock, setIdentifiedMedicineStock] = useState<number | null>(null);
+
 
   const [currentQuantity, setCurrentQuantity] = useState('');
   const [medicinesInPrescription, setMedicinesInPrescription] = useState<MedicineForPrescription[]>([]);
@@ -101,10 +103,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     const scannedData = typeof result === 'string' ? result : result.data;
     console.log('QR Scanned Data:', scannedData);
     
-    setIsScanningQR(false); // This will trigger the useEffect cleanup to stop scanner
+    setIsScanningQR(false); 
 
     let codeFromQR = '';
-    let medicineNameFromQR = ''; // Optional, for toast
+    let medicineNameFromQR = '';
 
     try {
         const parsedData = JSON.parse(scannedData);
@@ -113,10 +115,10 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             if (typeof parsedData.nombre === 'string') {
                 medicineNameFromQR = parsedData.nombre;
             }
-        } else { // Not JSON or no id field, treat as raw code
+        } else { 
             codeFromQR = scannedData;
         }
-    } catch (e) { // Not JSON, treat as raw code
+    } catch (e) { 
         codeFromQR = scannedData;
         console.warn('QR data is not a JSON or does not have an id field. Treating as raw ID.', e);
     }
@@ -124,8 +126,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (codeFromQR) {
         playBeep();
         setCurrentScannedCode(codeFromQR);
-        setManualCodeInputValue(codeFromQR); // Also update manual input field
-        setShowVerificationDialog(true); // Open verification dialog
+        setManualCodeInputValue(codeFromQR); 
+        setShowVerificationDialog(true); 
         toast({
             title: "QR Detectado",
             description: medicineNameFromQR 
@@ -151,12 +153,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     } else if (typeof error === 'string' && error === 'No QR code found') {
         return; 
     }
-    
-    // toast({ // Commenting out to avoid excessive toasts for minor scan issues
-    //     title: "Error de Escaneo QR",
-    //     description: typeof error === 'string' ? error : (error as Error).message,
-    //     variant: "destructive",
-    // });
   };
 
   useEffect(() => {
@@ -203,7 +199,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                     handleQrScanSuccess,
                     {
                         onDecodeError: handleQrScanError,
-                        // preferredCamera: "user", // Let qr-scanner decide for fallback
                         highlightScanRegion: true,
                         highlightCodeOutline: true,
                     }
@@ -270,6 +265,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       if (step === "enterQuantity") {
         setIdentifiedMedicineName(''); 
         setIdentifiedMedicineCode('');
+        setIdentifiedMedicineStock(null);
         setStep("identifyMedicine");
         return true;
       }
@@ -295,7 +291,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setStep("identifyMedicine");
   };
 
-  const verifyAndPrepareMedicine = (codeToVerifyRaw: string) => {
+  const verifyAndPrepareMedicine = async (codeToVerifyRaw: string) => {
     const codeToVerify = codeToVerifyRaw.trim().toUpperCase();
 
     if (!codeToVerify) {
@@ -309,8 +305,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         return;
     }
 
-    const allUserMedicines = getStoredMedicines();
-    const foundMedicine = allUserMedicines.find(med => med.id.toUpperCase() === codeToVerify);
+    const foundMedicine = await getMedicineByIdFromFirestore(codeToVerify);
 
     if (!foundMedicine) {
         toast({ title: "Medicamento No Encontrado", description: `El medicamento con código "${codeToVerifyRaw}" no existe en la base de datos.`, variant: "destructive" });
@@ -318,6 +313,17 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
+        setIdentifiedMedicineStock(null);
+        return;
+    }
+
+    if (foundMedicine.isBlocked) {
+        toast({ title: "Medicamento Cerrado", description: `El medicamento "${foundMedicine.name}" (ID: ${foundMedicine.id}) está cerrado y no se puede dispensar.`, variant: "destructive" });
+        setCurrentScannedCode('');
+        setManualCodeInputValue('');
+        setIdentifiedMedicineName(''); 
+        setIdentifiedMedicineCode('');
+        setIdentifiedMedicineStock(null);
         return;
     }
 
@@ -331,14 +337,16 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setManualCodeInputValue('');
         setIdentifiedMedicineName(''); 
         setIdentifiedMedicineCode('');
+        setIdentifiedMedicineStock(null);
         return; 
     }
 
     setIdentifiedMedicineName(foundMedicine.name);
     setIdentifiedMedicineCode(foundMedicine.id);
+    setIdentifiedMedicineStock(foundMedicine.currentStock);
     setStep("enterQuantity");
-    setIsScanningQR(false); // Ensure camera is off
-    setCurrentScannedCode(''); // Clear for next scan/input
+    setIsScanningQR(false); 
+    setCurrentScannedCode(''); 
     setManualCodeInputValue('');
 };
 
@@ -350,6 +358,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
+        setIdentifiedMedicineStock(null);
         setHasCameraPermission(null);
     }
   };
@@ -374,6 +383,11 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número positivo mayor a 0.", variant: "destructive" });
       return false;
     }
+
+    if (identifiedMedicineStock === null || quantityNum > identifiedMedicineStock) {
+        toast({ title: "Stock Insuficiente", description: `No hay suficiente stock para ${identifiedMedicineName}. Stock actual: ${identifiedMedicineStock || 0}.`, variant: "destructive" });
+        return false;
+    }
     
     if (medicinesInPrescription.some(med => med.code.toUpperCase() === identifiedMedicineCode.toUpperCase())) {
         toast({ title: "Error", description: `${identifiedMedicineName} ya está en la receta.`, variant: "destructive" });
@@ -388,7 +402,14 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
 
-    console.log('Simulating inventory update (dispensing):', {
+    // Actualizar el stock localmente para reflejar la cantidad reservada
+    if (identifiedMedicineStock !== null) {
+        setIdentifiedMedicineStock(identifiedMedicineStock - quantityNum);
+    }
+
+
+    // Log simulado - la actualización real del stock en Firestore se hará al confirmar la receta
+    console.log('Simulating inventory update for dispensing (will happen on confirm):', {
         date: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
         prescriptionNumber: prescriptionNumber,
         quantity: quantityNum,
@@ -410,6 +431,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       setManualCodeInputValue('');
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
+      setIdentifiedMedicineStock(null);
       setCurrentQuantity('');
       setStep("identifyMedicine");
     }
@@ -429,6 +451,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setManualCodeInputValue('');
         setIdentifiedMedicineName('');
         setIdentifiedMedicineCode('');
+        setIdentifiedMedicineStock(null);
         setCurrentQuantity('');
         setStep("reviewPrescription");
     } else { 
@@ -442,6 +465,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       setManualCodeInputValue('');
       setIdentifiedMedicineName('');
       setIdentifiedMedicineCode('');
+      setIdentifiedMedicineStock(null);
       setCurrentQuantity('');
       setStep("reviewPrescription");
     } else {
@@ -464,6 +488,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         toast({ title: "Cantidad Inválida", description: "La cantidad debe ser un número.", variant: "destructive" });
         return;
     }
+    // Aquí no podemos validar contra el stock total porque no lo tenemos para todos los items en revisión.
+    // Se validará al confirmar la receta.
     setMedicinesInPrescription(prevMeds =>
       prevMeds.map(med => med.id === medicineEntryId ? { ...med, quantity: newQuantity } : med)
     );
@@ -480,14 +506,16 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             toast({ title: "Cantidades Inválidas", description: "Asegúrate que todos los medicamentos tengan una cantidad válida (mayor a 0).", variant: "destructive" });
             return;
         }
-        console.log("Prescription Confirmed:", {
+        // Aquí es donde se debería hacer la actualización real en Firestore
+        // Por ahora, solo se simula el log.
+        console.log("Prescription Confirmed (SIMULATED - NO DB UPDATE YET):", {
             prescriptionNumber,
             recipeDate: recipeDate ? format(recipeDate, "yyyy-MM-dd", { locale: es }) : 'N/A',
             items: medicinesInPrescription,
             dispensedBy: getCurrentUserUsername() || 'System',
             finalizedAt: new Date().toISOString(),
         });
-        toast({ title: "Receta Confirmada", description: `Receta Nº ${prescriptionNumber} procesada (simulado).`, variant: "default" });
+        toast({ title: "Receta Confirmada", description: `Receta Nº ${prescriptionNumber} procesada (simulado - sin actualización de BD aún).`, variant: "default" });
     } else {
         toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} ha sido cancelada.`, variant: "default" });
     }
@@ -498,6 +526,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setManualCodeInputValue('');
     setIdentifiedMedicineName('');
     setIdentifiedMedicineCode('');
+    setIdentifiedMedicineStock(null);
     setCurrentQuantity('');
     setMedicinesInPrescription([]);
     setIsScanningQR(false);
@@ -555,7 +584,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             <div className="space-y-4">
               <Button type="button" variant="outline" onClick={handleScanButtonClick} className="w-full h-24 text-lg">
                   <Camera className="mr-3 h-8 w-8" />
-                  {isScanningQR ? 'Cerrar Cámara' : 'Escanear Código QR'}
+                  {isScanningQR ? 'Cerrar Cámara' : 'Escanear Código QR del Medicamento'}
               </Button>
 
               {isScanningQR && (
@@ -637,7 +666,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             setShowVerificationDialog(isOpen);
             if (!isOpen) {
                 setCurrentScannedCode('');
-                setManualCodeInputValue(''); // Clear manual input if dialog is closed
+                setManualCodeInputValue(''); 
             }
         }}>
             <DialogContent className="sm:max-w-md border-primary shadow-lg rounded-lg">
@@ -689,7 +718,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       <Card className="w-full max-w-md mx-auto shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-lg font-bold">{identifiedMedicineName}</CardTitle>
-          <CardDescription>Código: {identifiedMedicineCode}</CardDescription>
+          <CardDescription>Código: {identifiedMedicineCode} - Stock Actual: {identifiedMedicineStock ?? 'N/A'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -700,17 +729,25 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               required
               className="text-4xl h-20 p-4 text-center"
               min="1"
+              max={identifiedMedicineStock?.toString()}
             />
+             {identifiedMedicineStock !== null && parseInt(currentQuantity) > identifiedMedicineStock && (
+                <p className="text-sm text-destructive text-center">La cantidad excede el stock disponible.</p>
+            )}
           </div>
           <div className="space-y-3">
-            <Button onClick={handleAddMedicineAndContinueScanning} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-md py-3">
+            <Button 
+              onClick={handleAddMedicineAndContinueScanning} 
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-md py-3"
+              disabled={!currentQuantity.trim() || parseInt(currentQuantity) <= 0 || (identifiedMedicineStock !== null && parseInt(currentQuantity) > identifiedMedicineStock)}
+            >
               <PlusCircle className="mr-2 h-5 w-5" />
               Agregar y Escanear Otro
             </Button>
             <Button
                 onClick={handleGoToReviewFromQuantity}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3"
-                disabled={medicinesInPrescription.length === 0 && (!currentQuantity.trim() || parseInt(currentQuantity) <= 0)}
+                disabled={(medicinesInPrescription.length === 0 && (!currentQuantity.trim() || parseInt(currentQuantity) <= 0)) || (identifiedMedicineStock !== null && parseInt(currentQuantity) > identifiedMedicineStock && currentQuantity.trim() !== "")}
             >
               <ClipboardList className="mr-2 h-5 w-5" />
               Finalizar y Revisar Receta
@@ -793,4 +830,3 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
-

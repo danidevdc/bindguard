@@ -1,12 +1,12 @@
 
 "use client";
 
-import type { Medicine, DispensingRecord } from '@/lib/medicineService'; // Updated import
+import type { Medicine, DispensingRecord } from '@/lib/medicineService'; 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download, QrCode } from 'lucide-react';
-import { format, compareAsc } from 'date-fns'; // Removed parseISO as it's not needed for Date objects
+import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download, QrCode, PowerOff } from 'lucide-react';
+import { format, compareAsc } from 'date-fns'; 
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
@@ -15,16 +15,14 @@ import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import type { Timestamp } from 'firebase/firestore'; // Import Timestamp
+} from "@/components/ui/alert-dialog"; // AlertDialogTrigger removed as it's not used standalone here
+import type { Timestamp } from 'firebase/firestore';
 
 interface InventoryCardProps {
   medicine: Medicine;
@@ -64,20 +62,16 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
   const displayHistory = processedHistoryWithBalance;
 
-  // Modified to accept Date object directly
   const isExpiredClient = (expirationDateInput: Date | undefined, comparisonDate: Date): boolean => {
     if (!expirationDateInput) return false;
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
-    // expirationDateInput is already a Date object
     return compareAsc(expirationDateInput, comparisonDate) < 0;
   };
 
-  // Modified to accept Date object directly
   const isExpiringSoonClient = (expirationDateInput: Date | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
     if (!expirationDateInput) return false;
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
     
-    // expirationDateInput is already a Date object
     const diffTime = expirationDateInput.getTime() - comparisonDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 && diffDays <= daysThreshold;
@@ -94,6 +88,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       ["Presentación:", medicine.presentation],
       ["ID:", medicine.id],
       ["Stock Actual:", medicine.currentStock],
+      ["Estado:", medicine.isBlocked ? "CERRADO" : "ABIERTO"],
       [],
       ["Historial de Transacciones"],
     ];
@@ -130,10 +125,11 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     if(worksheet['A2']) worksheet['A2'].s = headerCellStyle;
     if(worksheet['A3']) worksheet['A3'].s = headerCellStyle;
     if(worksheet['A4']) worksheet['A4'].s = headerCellStyle;
-    if(worksheet['A6']) worksheet['A6'].s = headerCellStyle;
+    if(worksheet['A5']) worksheet['A5'].s = headerCellStyle; // For Estado
+    if(worksheet['A7']) worksheet['A7'].s = headerCellStyle; // For Historial Header
 
 
-    const historyHeaderRowIndex = 6; 
+    const historyHeaderRowIndex = 7; 
     ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter) => {
       const cellAddress = `${colLetter}${historyHeaderRowIndex}`;
       if (worksheet[cellAddress]) {
@@ -152,12 +148,6 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       description: `El archivo ${fileName} se está descargando.`,
     });
   };
-
-  const qrCodeValue = JSON.stringify({
-    id: medicine.id,
-    nombre: medicine.name,
-    presentacion: medicine.presentation,
-  });
   
   const handleDownloadQR = () => {
     if (qrCodeRef.current) {
@@ -181,7 +171,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
   return (
     <>
-      <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300">
+      <Card className={cn("flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300", medicine.isBlocked && "border-destructive border-2")}>
         <CardHeader className="pb-3 md:pb-4">
           <div className="flex justify-between items-start gap-2">
             <div className="flex-grow">
@@ -189,12 +179,20 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
               <CardDescription className="text-sm text-muted-foreground mt-0.5">
                 {medicine.presentation}
               </CardDescription>
-              <Badge
-                variant={"secondary"}
-                className="whitespace-nowrap text-xs px-2 py-0.5 mt-1.5 inline-block"
-              >
-                ID: {medicine.id}
-              </Badge>
+               <div className="flex items-center gap-2 mt-1.5">
+                  <Badge
+                    variant={"secondary"}
+                    className="whitespace-nowrap text-xs px-2 py-0.5 inline-block"
+                  >
+                    ID: {medicine.id}
+                  </Badge>
+                  {medicine.isBlocked && (
+                    <Badge variant="destructive" className="flex items-center text-xs px-2 py-0.5">
+                      <PowerOff className="mr-1 h-3 w-3" />
+                      BLOQUEADO
+                    </Badge>
+                  )}
+               </div>
             </div>
             <div className="flex-shrink-0">
               <div className="flex flex-col items-end gap-1.5">
@@ -232,7 +230,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
               {medicine.currentStock}
             </span>
           </div>
-          {medicine.currentStock <= stockLevelAlertThreshold && (
+          {medicine.currentStock <= stockLevelAlertThreshold && !medicine.isBlocked && (
             <div className="flex items-center text-xs md:text-sm text-destructive p-1.5 md:p-2 rounded-md border border-destructive/50 bg-destructive/10">
               <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1.5 sm:mr-2 shrink-0" />
               ¡Alerta de stock bajo!
@@ -326,6 +324,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 Este código QR contiene la identificación básica del medicamento. Puedes escanearlo o descargarlo.
+                 Contenido: {JSON.stringify({ id: qrDialogMedicine.id, nombre: qrDialogMedicine.name, presentacion: qrDialogMedicine.presentation })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div ref={qrCodeRef} className="flex justify-center items-center py-4 bg-white rounded-md p-4">
@@ -355,6 +354,3 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </>
   );
 }
-
-
-    

@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, Edit3, LockKeyhole, FileX2, Settings, PillBottle, Users } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -83,10 +83,12 @@ export default function AdminPage() {
                     Editar Medicamentos
                   </Button>
                 </Link>
-                <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Gestionar Lotes (Bloquear/Editar Vencimiento)')}>
-                  <LockKeyhole className="mr-3 h-6 w-6 text-destructive" />
-                  Gestionar Lotes (Bloquear/Editar Vencimiento)
-                </Button>
+                <Link href="/admin/toggle-medicine-status" passHref legacyBehavior>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <Power className="mr-3 h-6 w-6 text-orange-500" />
+                    Abrir/Cerrar Medicamento
+                  </Button>
+                </Link>
               </div>
             </div>
 
