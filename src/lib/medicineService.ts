@@ -76,11 +76,11 @@ export async function initializeDefaultMedicines(): Promise<void> {
       mockMedicinesForFirestore.forEach(medMock => {
         const medDocRef = doc(medicinesRef, medMock.id);
         
-        let calculatedStock = 0; // This will use the pre-calculated stock from the mock
+        // No need to recalculate stock here if mock already has it correct
         const historyForFirestore: DispensingRecord[] = medMock.dispensingHistory.map((h, index) => {
           return {
             ...h,
-            id: h.id || `hist_init_${medMock.id}_${index}_${Date.now()}`,
+            id: h.id || `hist_init_${medMock.id}_${index}_${Date.now()}`, // Ensure ID for history records
             date: Timestamp.fromDate(new Date(h.date)),
             expirationDate: h.expirationDate ? Timestamp.fromDate(new Date(h.expirationDate)) : undefined,
           };
@@ -91,7 +91,7 @@ export async function initializeDefaultMedicines(): Promise<void> {
           name: medMock.name,
           presentation: medMock.presentation,
           description: medMock.description || '',
-          currentStock: medMock.currentStock, // Use the pre-calculated stock
+          currentStock: medMock.currentStock, // Use the pre-calculated stock from the mock
           lastUpdated: serverTimestamp() as Timestamp,
           dispensingHistory: historyForFirestore,
           isBlocked: medMock.isBlocked !== undefined ? medMock.isBlocked : false,
@@ -259,4 +259,3 @@ export async function updateMedicineBlockedStatus(medicineId: string, isBlocked:
     lastUpdated: serverTimestamp()
   });
 }
-
