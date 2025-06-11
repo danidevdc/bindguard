@@ -15,7 +15,8 @@ import {
   deleteDoc,
   serverTimestamp,
   Timestamp,
-  writeBatch
+  writeBatch,
+  getDoc, // Added getDoc for direct document access
 } from 'firebase/firestore';
 import { initializeDefaultMedicines } from '@/lib/medicineService';
 
@@ -46,21 +47,12 @@ export function useAuth() {
       return null;
     }
     try {
-      const usersRef = collection(db, 'users');
-      // Since document ID is now the username, we can try to get it directly
-      const userDocRef = doc(usersRef, username.toLowerCase());
+      const userDocRef = doc(db, 'users', username.toLowerCase());
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
         return { firestoreId: userDoc.id, ...userDoc.data() } as UserData;
       }
-      // Fallback to query if needed, though direct doc access should be primary
-      // const q = query(usersRef, where('username', '==', username));
-      // const querySnapshot = await getDocs(q);
-      // if (!querySnapshot.empty) {
-      //   const userDocFromQuery = querySnapshot.docs[0];
-      //   return { firestoreId: userDocFromQuery.id, ...userDocFromQuery.data() } as UserData;
-      // }
       return null;
     } catch (error) {
       console.error('Error fetching user details from Firestore:', error);
@@ -70,7 +62,7 @@ export function useAuth() {
   }, [toast]);
 
   const checkUsernameExists = useCallback(async (username: string): Promise<boolean> => {
-    if (!db) return false;
+    if (!db || !username) return false; // Added check for username presence
     const userDocRef = doc(db, 'users', username.toLowerCase());
     const docSnap = await getDoc(userDocRef);
     return docSnap.exists();
@@ -201,6 +193,7 @@ export function useAuth() {
     }
   }, [router, toast, fetchUserDetails]);
 
+  // Register now takes explicit username (which is auto-generated in the form)
   const register = useCallback(async (firstName?: string, lastName?: string, username?: string, password?: string) => {
     setIsLoading(true);
     if (!db) {
@@ -214,15 +207,17 @@ export function useAuth() {
       return;
     }
 
-    const targetUsername = username.trim().toLowerCase();
+    const targetUsername = username.trim().toLowerCase(); // Username is now passed directly
 
     try {
-      const existingUser = await fetchUserDetails(targetUsername);
-      if (existingUser) {
-        toast({ title: "Error de Registro", description: "Este nombre de usuario ya existe. Por favor, elige otro.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
+      // The checkUsernameExists function is called from the form component before calling register.
+      // We could add a server-side check here too for extra safety, but the form's check should suffice for now.
+      // const existingUser = await fetchUserDetails(targetUsername); // This is already done by checkUsernameExists
+      // if (existingUser) {
+      //   toast({ title: "Error de Registro", description: "Este nombre de usuario ya existe. Por favor, elige otro.", variant: "destructive" });
+      //   setIsLoading(false);
+      //   return;
+      // }
       
       const newUserDocRef = doc(collection(db, 'users'), targetUsername);
       const newUser: Omit<UserData, 'firestoreId'> = {
@@ -246,7 +241,7 @@ export function useAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, fetchUserDetails, router]);
+  }, [toast, router]); // Removed fetchUserDetails as direct dependency here
 
 
   const logout = useCallback(() => {
@@ -289,6 +284,7 @@ export function useAuth() {
         firstName: docSnapshot.data().firstName,
         lastName: docSnapshot.data().lastName,
         isAdmin: docSnapshot.data().isAdmin || false,
+        // Do not return password here
       } as UserData));
       return usersList;
     } catch (error: any) {
@@ -317,21 +313,13 @@ export function useAuth() {
     }
   };
 
-  // Placeholder for password reset logic - requires backend
   const sendPasswordResetEmail = async (email: string): Promise<void> => {
-    // In a real app, this would:
-    // 1. Verify the email exists in your user database (e.g., check Firestore for a user with this email if you store it)
-    // 2. Generate a secure, unique, time-limited reset token.
-    // 3. Store the token hashed in the database, associated with the user.
-    // 4. Send an email to the user with a link containing this token (e.g., /reset-password?token=...).
-    // This requires a backend (e.g., Firebase Functions) and an email sending service.
     console.warn(`Simulating password reset email to: ${email}. This requires backend implementation.`);
     toast({
       title: "Simulación de Recuperación",
       description: `Si ${email} está registrado, se enviaría un enlace de recuperación (funcionalidad no implementada).`,
       duration: 5000,
     });
-    // Simulate success for UI purposes
     return Promise.resolve();
   };
 
@@ -349,7 +337,7 @@ export function useAuth() {
     fetchUserDetails, 
     getUsersFromFirestore,
     deleteUserFromFirestore,
-    checkUsernameExists, // Expose for registration form
-    sendPasswordResetEmail, // Expose for forgot password form
+    checkUsernameExists,
+    sendPasswordResetEmail,
   };
 }

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserPlus, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, AlertTriangle, UserCheck, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 
@@ -34,7 +34,7 @@ const getStrengthColor = (strength: number) => {
 export default function RegistrationForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
+  const [generatedUsername, setGeneratedUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -51,30 +51,39 @@ export default function RegistrationForm() {
     setPasswordStrength(calculatePasswordStrength(password));
   }, [password]);
 
-  // Debounce username check
+  // Auto-generate username
   useEffect(() => {
-    if (!username.trim()) {
+    if (firstName.trim() && lastName.trim()) {
+      const baseUsername = `${firstName.trim().toLowerCase()}.${lastName.trim().toLowerCase()}`;
+      setGeneratedUsername(baseUsername);
+    } else {
+      setGeneratedUsername('');
+    }
+  }, [firstName, lastName]);
+
+  // Debounce username check for generated username
+  useEffect(() => {
+    if (!generatedUsername.trim()) {
       setUsernameAvailable(null);
       return;
     }
     const handler = setTimeout(async () => {
       setUsernameCheckLoading(true);
-      const exists = await checkUsernameExists(username.trim().toLowerCase());
+      const exists = await checkUsernameExists(generatedUsername.trim());
       setUsernameAvailable(!exists);
       setUsernameCheckLoading(false);
-    }, 500);
+    }, 700);
 
     return () => {
       clearTimeout(handler);
     };
-  }, [username, checkUsernameExists]);
+  }, [generatedUsername, checkUsernameExists]);
 
   // Validate form for button disable state
   useEffect(() => {
     const allFieldsFilled =
       firstName.trim() !== '' &&
       lastName.trim() !== '' &&
-      username.trim() !== '' &&
       password !== '' &&
       confirmPassword !== '';
     const passwordsMatch = password === confirmPassword;
@@ -92,7 +101,6 @@ export default function RegistrationForm() {
   }, [
     firstName,
     lastName,
-    username,
     password,
     confirmPassword,
     usernameAvailable,
@@ -104,51 +112,18 @@ export default function RegistrationForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    // Re-check conditions for safety, though button state should prevent this
     if (!isFormValid) {
        toast({
         title: "Error de Registro",
-        description: "Por favor, completa y corrige todos los campos.",
+        description: "Por favor, completa y corrige todos los campos requeridos.",
         variant: "destructive",
       });
       return;
     }
-
-    // Redundant checks (already handled by isFormValid for button state, but good as a safeguard)
-    if (!firstName || !lastName || !username || !password || !confirmPassword) {
-      toast({
-        title: "Error de Registro",
-        description: "Por favor, completa todos los campos.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast({
-        title: "Error de Registro",
-        description: "Las contraseñas no coinciden.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (passwordStrength < 50) { 
-        toast({
-            title: "Contraseña Débil",
-            description: "Por favor, elige una contraseña más segura.",
-            variant: "destructive",
-        });
-        return;
-    }
-    if (usernameAvailable === false) {
-      toast({
-        title: "Nombre de Usuario No Disponible",
-        description: "El nombre de usuario ingresado ya está en uso. Por favor, elige otro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    await register(firstName, lastName, username.trim().toLowerCase(), password);
+    
+    // Generated username is already in `generatedUsername` state.
+    // Pass firstName, lastName, generatedUsername (as username), and password to register.
+    await register(firstName.trim(), lastName.trim(), generatedUsername.trim(), password);
   };
 
   return (
@@ -187,26 +162,25 @@ export default function RegistrationForm() {
           </div>
           
           <div className="space-y-1">
-            <Label htmlFor="username">Nombre de Usuario</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Elige un nombre de usuario (ej: juan.perez)"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="bg-background"
-            />
-            {usernameCheckLoading && <p className="text-xs text-muted-foreground">Verificando disponibilidad...</p>}
-            {username.trim() && !usernameCheckLoading && usernameAvailable === true && (
+            <Label htmlFor="generatedUsernameDisplay">Nombre de Usuario Asignado</Label>
+            <div 
+                id="generatedUsernameDisplay"
+                className="flex items-center p-3 min-h-[2.5rem] rounded-md border border-green-500 bg-green-50 text-green-700"
+            >
+                <UserCheck className="h-5 w-5 mr-2 text-green-600 shrink-0" />
+                {generatedUsername ? (
+                    <span className="font-medium">{generatedUsername}</span>
+                ): (
+                    <span className="text-muted-foreground italic">Se generará aquí...</span>
+                )}
+                {usernameCheckLoading && <Loader2 className="h-4 w-4 ml-auto animate-spin text-green-600" />}
+            </div>
+            {generatedUsername.trim() && !usernameCheckLoading && usernameAvailable === true && (
               <p className="text-xs text-green-600">Nombre de usuario disponible.</p>
             )}
-            {username.trim() && !usernameCheckLoading && usernameAvailable === false && (
-              <p className="text-xs text-destructive">Este nombre de usuario ya existe.</p>
+            {generatedUsername.trim() && !usernameCheckLoading && usernameAvailable === false && (
+              <p className="text-xs text-destructive">Este nombre de usuario ya existe. Intenta con otro nombre/apellido.</p>
             )}
-             <p className="text-xs text-muted-foreground">
-              Será usado para iniciar sesión. Ejemplo: {firstName.trim().toLowerCase() || 'nombre'}.{lastName.trim().toLowerCase() || 'apellido'}
-            </p>
           </div>
 
           <div className="space-y-1">
@@ -234,7 +208,7 @@ export default function RegistrationForm() {
             </div>
             {password && (
               <div className="mt-1">
-                <Progress value={passwordStrength} className={`h-2 ${getStrengthColor(passwordStrength)}`} />
+                <Progress value={passwordStrength} indicatorClassName={`${getStrengthColor(passwordStrength)}`} className="h-2"/>
                 <p className="text-xs mt-1 text-muted-foreground">
                   Fortaleza: {passwordStrength < 30 ? "Muy débil" : passwordStrength < 60 ? "Débil" : passwordStrength < 85 ? "Buena" : "Fuerte"}
                 </p>
@@ -293,6 +267,4 @@ export default function RegistrationForm() {
     </Card>
   );
 }
-
-
     
