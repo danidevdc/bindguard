@@ -18,17 +18,25 @@ export default function AppHeader() {
         </Link>
         <div className="flex items-center space-x-2"> 
           <Link href="/dashboard" passHref legacyBehavior>
-            <Button variant="ghost" className="text-primary hover:bg-primary/10">
+            <Button 
+              variant="ghost" 
+              className="text-primary hover:bg-primary hover:text-primary-foreground [&>svg]:text-primary hover:[&>svg]:text-primary-foreground"
+            >
               <HomeIcon className="mr-2 h-5 w-5" />
               Inicio
             </Button>
           </Link>
-          <Button variant="ghost" onClick={logout} className="text-primary hover:bg-primary/10">
+          <Button 
+            variant="ghost" 
+            onClick={logout} 
+            className="text-primary hover:bg-primary hover:text-primary-foreground [&>svg]:text-primary hover:[&>svg]:text-primary-foreground"
+          >
             <LogOut className="mr-2 h-5 w-5" />
-            Logout
+            Salir
           </Button>
         </div>
       </div>
     </header>
   );
 }
+

@@ -255,18 +255,18 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
           <div>
             <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
-            <div className="overflow-auto rounded-md border border-primary/30 max-h-60 bg-green-50 dark:bg-green-900/20 p-px">
+            <div className="overflow-auto rounded-md border border-primary/40 dark:border-green-700/60 max-h-60 bg-green-50 dark:bg-green-900/20 p-px">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10">
-                  <tr className="h-10 bg-primary text-primary-foreground shadow-md">
-                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Fecha</th>
-                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">
+                  <tr className="h-10 bg-primary/80 dark:bg-green-700/80 text-primary-foreground shadow-md">
+                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">Fecha</th>
+                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">
                       Pedidos
                     </th>
-                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Entrada</th>
-                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Salida</th>
-                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Saldo</th>
-                    <th className="min-w-[85px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">
+                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">Entrada</th>
+                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">Salida</th>
+                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">Saldo</th>
+                    <th className="min-w-[85px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">
                       Fecha Exp.
                     </th>
                     <th className="px-0 py-2 text-center align-middle font-medium whitespace-nowrap min-w-[100px]">Usuario</th>
@@ -300,20 +300,20 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                       <tr
                         key={record.id}
                         className={cn(
-                          "border-b border-primary/30",
-                          isCurrentlyExpired ? 'bg-red-100 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-primary/20'
+                          "border-b border-primary/30 dark:border-green-700/50",
+                          isCurrentlyExpired ? 'bg-red-100 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-green-700/15'
                         )}
                       >
-                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
-                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30">{record.rxNumber}</td>
-                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-700 dark:text-green-400 font-medium whitespace-nowrap text-xs border-r border-primary/30">
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">{record.rxNumber}</td>
+                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-700 dark:text-green-400 font-medium whitespace-nowrap text-xs border-r border-primary/30 dark:border-green-700/50">
                           {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-red-600 dark:text-red-400 font-medium whitespace-nowrap text-xs border-r border-primary/30">
+                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-red-600 dark:text-red-400 font-medium whitespace-nowrap text-xs border-r border-primary/30 dark:border-green-700/50">
                           {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-primary/30">{record.balance}</td>
-                        <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-primary/30 text-center justify-center">
+                        <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-primary/30 dark:border-green-700/50">{record.balance}</td>
+                        <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-primary/30 dark:border-green-700/50 text-center justify-center">
                           <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
                                   isCurrentlyExpired ? "text-red-500 dark:text-red-400" :
                                   isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-muted-foreground"
@@ -367,7 +367,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   nombre: qrDialogMedicine.name,
                   presentacion: qrDialogMedicine.presentation,
                 })}
-                size={240} // Increased size
+                size={240} 
                 bgColor={"#ffffff"}
                 fgColor={"#000000"}
                 level={"L"}
@@ -387,3 +387,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </>
   );
 }
+
