@@ -195,9 +195,12 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
            </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow space-y-3 md:space-y-4 px-2 py-3 sm:px-4 sm:py-3 md:p-6">
+          
           {/* Fila para ID/Estado y Botones de Acción */}
-          <div className="flex justify-between items-baseline mb-4"> {/* Cambiado a items-baseline */}
-            <div> {/* Contenedor para Badges */}
+          <div className="flex justify-between items-start mb-4"> {/* items-start para alinear por arriba */}
+            
+            {/* Contenedor para Badges a la izquierda */}
+            <div> 
               <div className="flex items-center gap-2">
                 <Badge
                   variant={"secondary"}
@@ -213,8 +216,10 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                 )}
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1.5"> {/* Contenedor para Botones */}
-               <Button
+
+            {/* Contenedor para Botones a la derecha (uno al lado del otro) */}
+            <div className="flex items-center gap-1.5"> 
+              <Button
                 onClick={handleDownloadExcel}
                 size="sm"
                 variant="default"
@@ -388,6 +393,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     </>
   );
 }
-
-
     
