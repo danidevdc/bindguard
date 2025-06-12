@@ -282,3 +282,63 @@ export async function updateMedicineBlockedStatus(medicineId: string, isBlocked:
   });
 }
 
+export async function deleteDispensingRecord(
+  medicineId: string,
+  recordIdToDelete: string
+): Promise<void> {
+  if (!db) {
+    console.error("Firestore instance (db) is not available in deleteDispensingRecord.");
+    throw new Error("La base de datos (Firestore) no está inicializada o disponible.");
+  }
+  const medDocRef = doc(db, 'medicines', medicineId);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const medDoc = await transaction.get(medDocRef);
+      if (!medDoc.exists()) {
+        throw new Error(`Medicamento con ID ${medicineId} no encontrado.`);
+      }
+
+      const medicineData = medDoc.data() as Medicine;
+      const initialHistory = medicineData.dispensingHistory || [];
+
+      // Filtrar el registro a eliminar
+      const updatedHistory = initialHistory.filter(record => record.id !== recordIdToDelete);
+
+      if (initialHistory.length === updatedHistory.length) {
+        // Si el registro no se encontró, podríamos optar por no hacer nada o lanzar un error.
+        // Por ahora, solo advertimos y no modificamos nada para evitar fallos inesperados.
+        console.warn(`Registro con ID ${recordIdToDelete} no encontrado en el historial del medicamento ${medicineId}. No se realizaron cambios.`);
+        return; // Termina la transacción sin realizar cambios.
+      }
+      
+      // Recalcular currentStock basado en el historial actualizado.
+      // Es importante ordenar por fecha para asegurar la correcta cronología de las transacciones.
+      const sortedHistory = [...updatedHistory].sort((a, b) => 
+        (a.date as Timestamp).toMillis() - (b.date as Timestamp).toMillis()
+      );
+      
+      let newCalculatedStock = 0;
+      for (const record of sortedHistory) {
+        if (record.type === 'stocked') {
+          newCalculatedStock += record.quantity;
+        } else if (record.type === 'dispensed') {
+          newCalculatedStock -= record.quantity;
+        }
+      }
+      
+      // Aquí no validaremos si el stock es negativo, Firestore lo permite.
+      // La lógica de negocio debería prevenirlo antes si es necesario.
+
+      transaction.update(medDocRef, {
+        dispensingHistory: updatedHistory,
+        currentStock: newCalculatedStock,
+        lastUpdated: serverTimestamp()
+      });
+    });
+  } catch (error) {
+    console.error(`Error al eliminar el registro de dispensación ${recordIdToDelete} para el medicamento ${medicineId}:`, error);
+    // Relanzar el error para que pueda ser manejado por el llamador (e.g., mostrar un toast al usuario)
+    throw error;
+  }
+}

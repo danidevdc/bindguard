@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power, LayoutList, ClipboardEdit } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -89,6 +89,12 @@ export default function AdminPage() {
                     Abrir/Cerrar Medicamento
                   </Button>
                 </Link>
+                <Link href="/admin/inventory" passHref legacyBehavior>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <ClipboardEdit className="mr-3 h-6 w-6 text-indigo-600" />
+                    Gestionar Bindcards
+                  </Button>
+                </Link>
               </div>
             </div>
 
@@ -125,3 +131,4 @@ export default function AdminPage() {
     </AuthWrapper>
   );
 }
+
