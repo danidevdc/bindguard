@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, type FormEvent, useRef, forwardRef, useImperativeHandle }
+import { useState, useEffect, type FormEvent, useRef, forwardRef, useImperativeHandle, useCallback }
 from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,11 +62,17 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const { getCurrentUserUsername } = useAuth();
 
   const [isScanningQR, setIsScanningQR] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  const [videoNode, setVideoNode] = useState<HTMLVideoElement | null>(null);
+  const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => {
+    console.log("DEBUG: videoCallbackRef called with node:", node);
+    setVideoNode(node);
+  }, []);
+
+  const qrScannerRef = useRef<QrScanner | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isCameraStreamActive, setIsCameraStreamActive] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const qrScannerRef = useRef<QrScanner | null>(null);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
 
 
@@ -101,7 +107,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     oscillator.stop(audioContextRef.current.currentTime + 0.1); 
   };
   
- const handleQrScanSuccess = (result: QrScanner.ScanResult | string) => {
+ const handleQrScanSuccess = useCallback((result: QrScanner.ScanResult | string) => {
     const scannedData = typeof result === 'string' ? result : result.data;
     console.log('DEBUG: QR Scan Successful. Raw Data:', scannedData);
     
@@ -111,27 +117,24 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         duration: 2000 
     });
     
-    setIsScanningQR(false); // This will close the camera Dialog
+    setIsScanningQR(false); 
 
     let codeFromQR = '';
-    let medicineNameFromQR = ''; // We can extract this if available for a better toast
+    let medicineNameFromQR = ''; 
 
     try {
         const parsedData = JSON.parse(scannedData);
         console.log('DEBUG: Parsed QR Data:', parsedData);
         if (parsedData && typeof parsedData.id === 'string') {
             codeFromQR = parsedData.id;
-            // Optionally grab name for a better toast message, if it exists in QR
             if (typeof parsedData.nombre === 'string') {
                 medicineNameFromQR = parsedData.nombre;
             }
         } else { 
-            // If not expected JSON, or no 'id' field, treat the whole thing as the code.
             codeFromQR = scannedData; 
              console.warn('DEBUG: QR data is not the expected JSON format or does not have an id field. Treating as raw ID.');
         }
     } catch (e) { 
-        // If JSON.parse fails, treat the whole thing as the code.
         codeFromQR = scannedData; 
         console.warn('DEBUG: QR data is not valid JSON. Treating as raw ID.', e);
     }
@@ -139,8 +142,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (codeFromQR) {
         playBeep();
         setCurrentScannedCode(codeFromQR);
-        setManualCodeInputValue(codeFromQR); // Pre-fill manual input as well
-        setShowVerificationDialog(true); // Open the next dialog to confirm this code
+        setManualCodeInputValue(codeFromQR); 
+        setShowVerificationDialog(true); 
         toast({
             title: "QR Procesado",
             description: medicineNameFromQR 
@@ -154,50 +157,45 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             variant: "destructive",
         });
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
 
 
-  const handleQrScanError = (error: Error | string) => {
-    console.error('DEBUG: QR Scan Error/Event:', error); 
+  const handleQrScanError = useCallback((error: Error | string) => {
+    console.log('DEBUG: QR Scan Error/Event:', error); 
      if (typeof error === 'object' && error !== null && 'message' in error) {
         if ((error as Error).message === 'No QR code found') {
-            // This is a common event, not necessarily an error to show to user repeatedly
-            return; // Do nothing visible for "No QR code found"
+            return; 
         }
     } else if (typeof error === 'string' && error === 'No QR code found') {
-        return; // Do nothing visible for "No QR code found"
+        return; 
     }
-    // For other errors, you might want to inform the user or log more verbosely
-    // For now, just console.error
-  };
+  }, []);
 
   useEffect(() => {
-    let localQrScanner: QrScanner | null = null;
-    let localStream: MediaStream | null = null;
-    
-    if (isScanningQR) {
-      const startScanner = async () => {
-        setIsCameraStreamActive(false); // Reset before attempt
-        if (!videoRef.current) {
-          console.log("DEBUG: Video element not available for scanner.");
-          return;
-        }
+    console.log("DEBUG: useEffect for [isScanningQR, videoNode] triggered. isScanningQR:", isScanningQR, "videoNode exists:", !!videoNode);
 
+    if (isScanningQR && videoNode) {
+      const startScanner = async () => {
+        setIsCameraStreamActive(false);
+        setHasCameraPermission(null); // Reset permission status for new attempt
+
+        let stream: MediaStream | null = null;
         try {
-          console.log("DEBUG: Attempting to get environment camera.");
-          localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          console.log("DEBUG: Attempting to get environment camera for videoNode:", videoNode);
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
           setHasCameraPermission(true);
-          videoRef.current.srcObject = localStream;
-          await videoRef.current.play().catch(e => {
-            console.error("DEBUG: Environment video play failed:", e);
-            setIsCameraStreamActive(false);
-            throw e; // Re-throw to be caught by the main try-catch
-          });
+          videoNode.srcObject = stream;
+          await videoNode.play();
           setIsCameraStreamActive(true);
           console.log("DEBUG: Environment camera stream started and playing.");
 
-          localQrScanner = new QrScanner(
-            videoRef.current,
+          if (qrScannerRef.current) {
+            qrScannerRef.current.stop();
+            qrScannerRef.current.destroy();
+          }
+          qrScannerRef.current = new QrScanner(
+            videoNode,
             handleQrScanSuccess,
             {
               onDecodeError: handleQrScanError,
@@ -206,42 +204,43 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               highlightCodeOutline: true,
             }
           );
-          qrScannerRef.current = localQrScanner; // Store in ref
-          await localQrScanner.start();
+          await qrScannerRef.current.start();
           console.log("DEBUG: QR Scanner started with environment camera.");
+
         } catch (error: any) {
           console.error('DEBUG: Error accessing environment camera or starting scanner:', error);
-          setIsCameraStreamActive(false); // Ensure stream active is false
-          // Try fallback to any camera if environment fails
+          if (stream) stream.getTracks().forEach(track => track.stop());
+          if(videoNode) videoNode.srcObject = null;
+          setIsCameraStreamActive(false);
+
           try { 
-            console.log("DEBUG: Attempting to get fallback camera (any).");
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            console.log("DEBUG: Attempting to get fallback camera (any) for videoNode:", videoNode);
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
-            if (videoRef.current) {
-                videoRef.current.srcObject = localStream;
-                await videoRef.current.play().catch(e => {
-                    console.error("DEBUG: Fallback video play failed:", e);
-                    setIsCameraStreamActive(false);
-                    throw e; // Re-throw
-                });
-                setIsCameraStreamActive(true);
-                console.log("DEBUG: Fallback camera stream started and playing.");
-                
-                localQrScanner = new QrScanner(
-                    videoRef.current,
-                    handleQrScanSuccess,
-                    {
-                        onDecodeError: handleQrScanError,
-                        highlightScanRegion: true,
-                        highlightCodeOutline: true,
-                    }
-                );
-                qrScannerRef.current = localQrScanner; // Store in ref
-                await localQrScanner.start();
-                console.log("DEBUG: QR Scanner started with fallback camera.");
+            videoNode.srcObject = stream;
+            await videoNode.play();
+            setIsCameraStreamActive(true);
+            console.log("DEBUG: Fallback camera stream started and playing.");
+            
+            if (qrScannerRef.current) {
+                qrScannerRef.current.stop();
+                qrScannerRef.current.destroy();
             }
+            qrScannerRef.current = new QrScanner(
+                videoNode,
+                handleQrScanSuccess,
+                {
+                    onDecodeError: handleQrScanError,
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                }
+            );
+            await qrScannerRef.current.start();
+            console.log("DEBUG: QR Scanner started with fallback camera.");
           } catch (fallbackError: any) {
              console.error('DEBUG: Fallback camera access error:', fallbackError);
+             if (stream) stream.getTracks().forEach(track => track.stop());
+             if(videoNode) videoNode.srcObject = null;
              setHasCameraPermission(false);
              setIsCameraStreamActive(false);
              toast({
@@ -249,54 +248,52 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                 title: 'Acceso a Cámara Denegado',
                 description: 'Por favor, habilita los permisos de cámara para escanear.',
              });
-             setIsScanningQR(false); // Close the dialog if camera fails entirely
+             setIsScanningQR(false); 
           }
         }
       };
       startScanner();
-    } else { // When isScanningQR becomes false (dialog closes)
+    } else if (!isScanningQR) { // Explicitly stop if dialog is closed
+        console.log("DEBUG: isScanningQR is false, ensuring scanner and camera are stopped.");
         if (qrScannerRef.current) {
-            console.log("DEBUG: Stopping and destroying QR scanner instance (isScanningQR false).");
             qrScannerRef.current.stop();
             qrScannerRef.current.destroy();
             qrScannerRef.current = null;
         }
-        if (videoRef.current && videoRef.current.srcObject) {
-            console.log("DEBUG: Stopping camera stream tracks (isScanningQR false).");
-            const stream = videoRef.current.srcObject as MediaStream;
+        if (videoNode && videoNode.srcObject) {
+            const stream = videoNode.srcObject as MediaStream;
             stream.getTracks().forEach(track => track.stop());
-            videoRef.current.srcObject = null;
+            videoNode.srcObject = null;
         }
         setIsCameraStreamActive(false);
     }
 
-    return () => { // Cleanup function for the useEffect
-      console.log("DEBUG: useEffect cleanup for isScanningQR triggered.");
+    return () => { 
+      console.log("DEBUG: Cleanup function for [isScanningQR, videoNode] useEffect.");
       if (qrScannerRef.current) {
-        console.log("DEBUG: Component unmount/dep change: Destroying QR scanner.");
-        qrScannerRef.current.stop(); // Stop scanner
-        qrScannerRef.current.destroy(); // Fully destroy instance
+        console.log("DEBUG: Cleanup: Destroying QR scanner.");
+        qrScannerRef.current.stop(); 
+        qrScannerRef.current.destroy(); 
         qrScannerRef.current = null;
       }
-       if (videoRef.current && videoRef.current.srcObject) {
-        console.log("DEBUG: Component unmount/dep change: Stopping camera tracks.");
-        const stream = videoRef.current.srcObject as MediaStream;
+       if (videoNode && videoNode.srcObject) {
+        console.log("DEBUG: Cleanup: Stopping camera tracks.");
+        const stream = videoNode.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null; // Release camera
+        videoNode.srcObject = null; 
       }
-      setIsCameraStreamActive(false); // Ensure this is reset
+      setIsCameraStreamActive(false); 
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isScanningQR]);
+  }, [isScanningQR, videoNode, handleQrScanSuccess, handleQrScanError, toast]);
 
 
   useImperativeHandle(ref, () => ({
     navigateBackStep: () => {
-      if (isScanningQR) { // If camera dialog is open
-        setIsScanningQR(false); // Close it
+      if (isScanningQR) { 
+        setIsScanningQR(false); 
         return true;
       }
-      if (showVerificationDialog) { // If scanned code verification dialog is open
+      if (showVerificationDialog) { 
         setShowVerificationDialog(false);
         setCurrentScannedCode('');
         setManualCodeInputValue('');
@@ -310,7 +307,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         setIdentifiedMedicineName(''); 
         setIdentifiedMedicineCode('');
         setIdentifiedMedicineStock(null);
-        setCurrentQuantity(''); // Clear quantity when going back
+        setCurrentQuantity(''); 
         setStep("identifyMedicine");
         return true;
       }
@@ -390,7 +387,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setIdentifiedMedicineCode(foundMedicine.id);
     setIdentifiedMedicineStock(foundMedicine.currentStock);
     setStep("enterQuantity");
-    // setIsScanningQR(false); // This is now handled by Dialog onOpenChange or successful scan
     setCurrentScannedCode(''); 
     setManualCodeInputValue('');
 };
@@ -398,8 +394,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   
   const handleManualCodeSubmit = () => {
     if (manualCodeInputValue.trim()) {
-        setCurrentScannedCode(manualCodeInputValue.trim()); // Set for verification dialog
-        setShowVerificationDialog(true); // Open verification dialog
+        setCurrentScannedCode(manualCodeInputValue.trim()); 
+        setShowVerificationDialog(true); 
     } else {
         toast({ title: "Código Requerido", description: "Ingresa un código de medicamento para verificar.", variant: "destructive"});
     }
@@ -422,10 +418,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         return false;
     }
     
-    // Re-check for duplicates before adding (although verifyAndPrepareMedicine also checks)
     if (medicinesInPrescription.some(med => med.code.toUpperCase() === identifiedMedicineCode.toUpperCase())) {
         toast({ title: "Error: Duplicado", description: `${identifiedMedicineName} ya está en la receta.`, variant: "destructive" });
-        return false; // Should not happen if verifyAndPrepareMedicine worked correctly
+        return false; 
     }
 
     const newMedicineEntry: MedicineForPrescription = {
@@ -435,11 +430,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       quantity: quantityNum,
     };
     setMedicinesInPrescription(prev => [...prev, newMedicineEntry]);
-
-    // Update local "view" of stock. Actual DB update is on final confirmation.
-    if (identifiedMedicineStock !== null) {
-        // setIdentifiedMedicineStock(identifiedMedicineStock - quantityNum); // This can be confusing if user goes back
-    }
 
     toast({
       title: "Medicamento Añadido a Receta",
@@ -523,7 +513,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   };
 
   const finalizeAndRedirect = async (action: "confirmed" | "cancelled") => {
-    const currentUsername = getCurrentUserUsername() || 'System.User'; // Default username if not found
+    const currentUsername = getCurrentUserUsername(); 
 
     if (action === "confirmed") {
         if (medicinesInPrescription.some(med => med.quantity <= 0)) {
@@ -545,8 +535,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                     med.quantity,
                     'dispensed',
                     prescriptionNumber,
-                    currentUsername,
-                    Timestamp.fromDate(recipeDate)
+                    currentUsername, 
+                    Timestamp.fromDate(recipeDate) 
                 );
             } catch (error: any) {
                 allUpdatesSuccessful = false;
@@ -567,7 +557,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             });
         }
 
-    } else { // Cancelled
+    } else { 
         toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} ha sido cancelada. No se guardaron cambios.` });
     }
 
@@ -635,31 +625,20 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           <CardContent className="space-y-6">
             
             <Dialog open={isScanningQR} onOpenChange={(open) => {
+                console.log("DEBUG: Dialog onOpenChange called. New open state:", open);
                 setIsScanningQR(open);
-                if (!open) { // When dialog is closed
-                    if (qrScannerRef.current) {
-                        console.log("DEBUG: Dialog closed, explicitly stopping scanner.");
-                        qrScannerRef.current.stop();
-                        qrScannerRef.current.destroy();
-                        qrScannerRef.current = null;
-                    }
-                    if (videoRef.current && videoRef.current.srcObject) {
-                        const stream = videoRef.current.srcObject as MediaStream;
-                        stream.getTracks().forEach(track => track.stop());
-                        videoRef.current.srcObject = null;
-                    }
-                    setIsCameraStreamActive(false);
-                }
+                // La limpieza del scanner y cámara ahora se maneja principalmente en el useEffect [isScanningQR, videoNode]
             }}>
               <DialogTrigger asChild>
                 <Button 
                   variant="default" 
                   className="w-full h-16 text-lg bg-blue-600 hover:bg-blue-600/90 text-white"
                   onClick={() => {
-                    setCurrentScannedCode(''); // Clear previous scan results
+                    setCurrentScannedCode(''); 
                     setManualCodeInputValue('');
-                    setHasCameraPermission(null); // Reset permission status for new attempt
-                    setIsScanningQR(true); // Trigger dialog open
+                    setHasCameraPermission(null); 
+                    setIsCameraStreamActive(false);
+                    setIsScanningQR(true); 
                   }}
                 >
                   <Camera className="mr-3 h-8 w-8" />
@@ -674,7 +653,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="mt-2 p-2 border rounded-md bg-muted/30">
-                  <video ref={videoRef} className="w-full aspect-video rounded-md bg-black" autoPlay playsInline muted />
+                  <video ref={videoCallbackRef} className="w-full aspect-video rounded-md bg-black" autoPlay playsInline muted />
                   {hasCameraPermission === false && (
                     <Alert variant="destructive" className="mt-2">
                       <AlertTriangle className="h-4 w-4" />
@@ -692,9 +671,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                         Las guías amarillas aparecerán al detectar un QR.
                       </p>
                   )}
-                  {hasCameraPermission === true && !isCameraStreamActive && (
+                   {hasCameraPermission === true && !isCameraStreamActive && videoNode && videoNode.HAVE_NOTHING && (
                      <div className="flex items-center justify-center text-muted-foreground mt-2">
-                        <VideoOff className="mr-2 h-4 w-4"/> No se pudo activar el stream de la cámara.
+                        <VideoOff className="mr-2 h-4 w-4"/> No se pudo activar el stream de la cámara. Verifica los permisos.
                      </div>
                   )}
                 </div>
