@@ -188,20 +188,13 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   return (
     <>
       <Card className={cn("flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300", medicine.isBlocked && "border-destructive border-2")}>
-        <CardHeader className="pb-3 md:pb-4">
-           <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
-           <CardDescription className="text-sm text-muted-foreground mt-0.5">
-             {medicine.presentation}
-           </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow space-y-3 md:space-y-4 px-2 py-3 sm:px-4 sm:py-3 md:p-6">
-          
-          {/* Fila para ID/Estado y Botones de Acción */}
-          <div className="flex justify-between items-start mb-4"> {/* items-start para alinear por arriba */}
-            
-            {/* Contenedor para Badges a la izquierda */}
-            <div> 
-              <div className="flex items-center gap-2">
+        <CardHeader className="pb-3 md:pb-4 flex flex-row justify-between items-start">
+          <div>
+            <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground mt-0.5">
+              {medicine.presentation}
+            </CardDescription>
+            <div className="mt-1.5 flex items-center gap-2">
                 <Badge
                   variant={"secondary"}
                   className="whitespace-nowrap text-xs px-2 py-0.5 inline-block"
@@ -214,22 +207,11 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     BLOQUEADO
                   </Badge>
                 )}
-              </div>
             </div>
-
-            {/* Contenedor para Botones a la derecha (uno al lado del otro) */}
-            <div className="flex items-center gap-1.5"> 
-              <Button
-                onClick={handleDownloadExcel}
-                size="sm"
-                variant="default"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto [&>svg]:text-accent-foreground"
-                title="Descargar Ficha Excel"
-              >
-                <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                Descargar Ficha
-              </Button>
-              <Button
+          </div>
+          
+          <div className="flex flex-col items-end gap-1.5"> 
+             <Button
                 onClick={() => setQrDialogMedicine(medicine)}
                 size="sm"
                 variant="outline"
@@ -239,8 +221,19 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                 <QrCode className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 QR
               </Button>
+             <Button
+                onClick={handleDownloadExcel}
+                size="sm"
+                variant="default"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs px-3 py-1 h-auto [&>svg]:text-accent-foreground"
+                title="Descargar Ficha Excel"
+              >
+                <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                Descargar Ficha
+              </Button>
             </div>
-          </div>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-3 md:space-y-4 px-2 py-3 sm:px-4 sm:py-3 md:p-6">
           
           {/* Sección Stock Actual */}
           <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md shadow-md">
@@ -394,3 +387,4 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   );
 }
     
+
