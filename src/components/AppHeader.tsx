@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { Pill, LogOut, Home as HomeIcon } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 export default function AppHeader() {
   const { logout } = useAuth();
+  const router = useRouter(); // Initialize useRouter
 
   return (
     <header className="bg-card shadow-md">
@@ -18,8 +20,8 @@ export default function AppHeader() {
         </Link>
         <div className="flex items-center space-x-2"> 
           <Button
-            variant="outline"
-            className="text-foreground hover:bg-primary/10 hover:text-primary [&>svg]:text-foreground hover:[&>svg]:text-primary"
+            variant="outline" // Kept outline, or can be ghost if no border is preferred by default
+            className="text-primary border-primary/50 hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
             onClick={() => router.push('/dashboard')}
             aria-label="Inicio"
           >
@@ -27,9 +29,9 @@ export default function AppHeader() {
             Inicio
           </Button>
           <Button 
-            variant="outline" 
+            variant="outline" // Kept outline, or can be ghost
             onClick={logout} 
-            className="text-foreground hover:bg-primary/10 hover:text-primary [&>svg]:text-foreground hover:[&>svg]:text-primary"
+            className="text-primary border-primary/50 hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
             aria-label="Salir"
           >
             <LogOut className="mr-2 h-5 w-5" />
