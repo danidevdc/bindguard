@@ -17,19 +17,20 @@ export default function AppHeader() {
           <h1 className="text-xl font-semibold">BindGuard</h1>
         </Link>
         <div className="flex items-center space-x-2"> 
-          <Link href="/dashboard" passHref legacyBehavior>
-            <Button 
-              variant="ghost" 
-              className="text-primary hover:bg-primary hover:text-primary-foreground [&>svg]:text-primary hover:[&>svg]:text-primary-foreground"
-            >
-              <HomeIcon className="mr-2 h-5 w-5" />
-              Inicio
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            className="text-foreground hover:bg-primary/10 hover:text-primary [&>svg]:text-foreground hover:[&>svg]:text-primary"
+            onClick={() => router.push('/dashboard')}
+            aria-label="Inicio"
+          >
+            <HomeIcon className="mr-2 h-5 w-5" />
+            Inicio
+          </Button>
           <Button 
-            variant="ghost" 
+            variant="outline" 
             onClick={logout} 
-            className="text-primary hover:bg-primary hover:text-primary-foreground [&>svg]:text-primary hover:[&>svg]:text-primary-foreground"
+            className="text-foreground hover:bg-primary/10 hover:text-primary [&>svg]:text-foreground hover:[&>svg]:text-primary"
+            aria-label="Salir"
           >
             <LogOut className="mr-2 h-5 w-5" />
             Salir
@@ -39,4 +40,3 @@ export default function AppHeader() {
     </header>
   );
 }
-
