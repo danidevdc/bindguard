@@ -178,6 +178,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     if (delayedRestartTimeoutRef.current) {
       clearTimeout(delayedRestartTimeoutRef.current);
       delayedRestartTimeoutRef.current = null;
+      console.log("DEBUG: Cleared delayedRestartTimeoutRef.");
     }
     if (qrScannerRef.current) {
         console.log("DEBUG: Stopping and destroying QrScanner instance.");
@@ -190,7 +191,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         const stream = videoNode.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
         videoNode.srcObject = null;
-        // Limpiar listeners si se asignaron directamente al nodo
         videoNode.oncanplay = null;
         videoNode.onerror = null;
     }
@@ -209,14 +209,18 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         }
         console.log("DEBUG: startScanner - Setting isCameraInitializingRef.current = true");
         isCameraInitializingRef.current = true;
-        setIsCameraStreamActive(false);
+        setIsCameraStreamActive(false); // Reset before trying to activate
 
-        stopCameraAndScanner(); // Asegura que todo esté limpio antes de empezar
+        stopCameraAndScanner(); // Ensure everything is clean before starting
 
         let stream: MediaStream | null = null;
         let selectedCamera = "environment";
 
         const initializeQrScannerInstance = async (currentStream: MediaStream, videoEl: HTMLVideoElement) => {
+            // Ensure previous listeners are cleared
+            videoEl.oncanplay = null;
+            videoEl.onerror = null;
+
             return new Promise<void>((resolve, reject) => {
                 videoEl.oncanplay = async () => {
                     console.log("DEBUG: videoNode.oncanplay event triggered.");
@@ -226,7 +230,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                         console.log(`DEBUG: videoNode.play() successful with ${selectedCamera} camera after oncanplay.`);
                         setIsCameraStreamActive(true);
 
-                        if (qrScannerRef.current) {
+                        if (qrScannerRef.current) { // Should have been cleared by stopCameraAndScanner
                             qrScannerRef.current.destroy();
                             qrScannerRef.current = null;
                         }
@@ -244,52 +248,41 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                         await qrScannerRef.current.start();
                         console.log(`DEBUG: QR Scanner started with ${selectedCamera} camera after video oncanplay and play.`);
                         
-                        // Programar la re-inicialización retrasada
                         if (delayedRestartTimeoutRef.current) {
                             clearTimeout(delayedRestartTimeoutRef.current);
                         }
                         delayedRestartTimeoutRef.current = setTimeout(async () => {
-                            if (isScanningQR && videoNode) { // Verificar si todavía estamos escaneando
-                                console.log("DEBUG: Attempting delayed QrScanner restart.");
-                                if (qrScannerRef.current) {
-                                    qrScannerRef.current.stop();
-                                    qrScannerRef.current.destroy();
-                                }
-                                qrScannerRef.current = new QrScanner(
-                                    videoNode, // Usar el videoNode del estado que podría haberse actualizado
-                                    handleQrScanSuccess,
-                                    {
-                                        onDecodeError: handleQrScanError,
-                                        preferredCamera: selectedCamera as "environment" | "user",
-                                        highlightScanRegion: true,
-                                        highlightCodeOutline: true,
-                                    }
-                                );
+                            if (isScanningQR && videoNode && qrScannerRef.current) { 
+                                console.log("DEBUG: Attempting delayed QrScanner stop() and start() on existing instance.");
+                                qrScannerRef.current.stop();
                                 try {
                                     await qrScannerRef.current.start();
-                                    console.log("DEBUG: Delayed QrScanner restart successful.");
+                                    console.log("DEBUG: Delayed QrScanner.start() successful on existing instance.");
                                 } catch (restartError) {
-                                    console.error("DEBUG: Error during delayed QrScanner restart:", restartError);
+                                    console.error("DEBUG: Error during delayed QrScanner.start() on existing instance:", restartError);
                                 }
+                            } else {
+                                console.log("DEBUG: Delayed restart skipped, conditions not met (isScanningQR, videoNode, qrScannerRef.current).");
                             }
-                        }, 700); // 700ms de retraso
+                        }, 700); 
 
                         resolve();
-                    } catch (playError) {
+                    } catch (playError: any) {
                         console.error(`DEBUG: videoNode.play() or QrScanner.start() failed for ${selectedCamera} camera after oncanplay:`, playError);
+                         toast({ variant: 'destructive', title: 'Error Cámara/Escáner', description: `No se pudo iniciar el video o escáner: ${playError.message || playError.name}` });
                         reject(playError);
                     }
                 };
                 videoEl.onerror = (e) => {
                     console.error(`DEBUG: Video Element Error with ${selectedCamera} camera:`, e);
                     videoEl.onerror = null; 
+                    toast({ variant: 'destructive', title: 'Error de Video', description: 'Ocurrió un error con el elemento de video.' });
                     reject(new Error('Video element error'));
                 };
 
-                videoEl.srcObject = currentStream; // Asignar stream DESPUÉS de configurar oncanplay
+                videoEl.srcObject = currentStream; 
             });
         };
-
 
         try {
           console.log("DEBUG: Attempting to get environment camera for videoNode:", videoNode);
@@ -302,12 +295,11 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
           if (stream && stream.active) stream.getTracks().forEach(track => track.stop());
           if(videoNode && videoNode.srcObject) videoNode.srcObject = null; 
           
-          // Intentar con cámara de respaldo (cualquiera)
           try { 
             console.log("DEBUG: Attempting to get fallback camera (any) for videoNode:", videoNode);
             stream = await navigator.mediaDevices.getUserMedia({ video: true }); 
             setHasCameraPermission(true);
-            selectedCamera = "user"; // O simplemente no especificar `preferredCamera`
+            selectedCamera = "user"; 
             await initializeQrScannerInstance(stream, videoNode);
           } catch (fallbackError: any) {
              console.error('DEBUG: Fallback camera access error:', fallbackError);
@@ -337,7 +329,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
       console.log("DEBUG: Cleanup function for scanner useEffect (unmount or dep change).");
       stopCameraAndScanner();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isScanningQR, videoNode, stopCameraAndScanner, handleQrScanSuccess, handleQrScanError, toast]);
 
 
@@ -682,9 +673,9 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                     console.log("DEBUG: Scan Dialog onOpenChange. New open state:", open);
                     setIsScanningQR(open); 
                     if (!open) { 
+                        // La limpieza se maneja en el useEffect
                         setCurrentScannedCode('');
                         setManualCodeInputValue('');
-                        // La limpieza se maneja en el useEffect
                     }
                 }}
             >
@@ -698,7 +689,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                     setManualCodeInputValue('');
                     setHasCameraPermission(null); 
                     setIsCameraStreamActive(false);
-                    isCameraInitializingRef.current = false; // Reset init flag
+                    isCameraInitializingRef.current = false; 
                     setIsScanningQR(true); 
                   }}
                 >
@@ -976,3 +967,4 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
+
