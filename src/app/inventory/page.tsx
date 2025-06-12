@@ -24,15 +24,15 @@ export default function InventoryPage() {
       setMedicines(firestoreMedicines);
       if (showToast) {
         toast({
-          title: "Inventario Actualizado",
+          title: "Bindcards Actualizados",
           description: "La lista de medicamentos ha sido recargada desde la base de datos.",
         });
       }
     } catch (error) {
       console.error("Failed to load medicines from Firestore:", error);
       toast({
-        title: "Error al Cargar Inventario",
-        description: error instanceof Error ? error.message : "No se pudo obtener el inventario desde Firestore.",
+        title: "Error al Cargar Bindcards",
+        description: error instanceof Error ? error.message : "No se pudo obtener la lista desde Firestore.",
         variant: "destructive",
       });
       setMedicines([]); // Clear medicines on error
@@ -61,7 +61,7 @@ export default function InventoryPage() {
            <Button
             variant="outline"
             onClick={() => loadMedicines(true)}
-            aria-label="Refrescar lista de inventario"
+            aria-label="Refrescar lista de Bindcards"
             disabled
           >
             <RotateCw className="h-5 w-5 animate-spin" />
@@ -93,8 +93,8 @@ export default function InventoryPage() {
          <Button
           variant="outline"
           onClick={() => loadMedicines(true)} // Pass true to show toast on manual refresh
-          aria-label="Refrescar lista de inventario"
-          title="Refrescar Inventario"
+          aria-label="Refrescar lista de Bindcards"
+          title="Refrescar Bindcards"
           className="hover:bg-accent hover:text-accent-foreground"
           disabled={isLoading} // Disable button while loading
         >
@@ -102,10 +102,10 @@ export default function InventoryPage() {
         </Button>
       </div>
       <div className="space-y-8">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground text-center">Inventario General</h2>
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground text-center">Bindcards</h2>
         { !isLoading && medicines.length === 0 && (
           <p className="text-center text-muted-foreground py-10">
-            No hay medicamentos en el inventario o no se pudieron cargar. Intenta refrescar o verifica la conexión y configuración de Firestore.
+            No hay medicamentos en Bindcards o no se pudieron cargar. Intenta refrescar o verifica la conexión y configuración de Firestore.
           </p>
         )}
         <InventoryList medicines={medicines} />

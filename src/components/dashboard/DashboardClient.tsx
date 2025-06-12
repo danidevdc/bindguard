@@ -63,7 +63,7 @@ export default function DashboardClient() {
           <Link href="/scan" passHref legacyBehavior>
             <Button
               variant="default"
-              className="w-full h-40 text-xl bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
+              className="w-full h-40 text-xl bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Escanear Medicamento"
             >
               <QrCode className="h-16 w-16 mb-3" />
@@ -74,11 +74,11 @@ export default function DashboardClient() {
           <Link href="/inventory" passHref legacyBehavior>
             <Button
               variant="default"
-              className="w-full h-40 text-xl bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
-              aria-label="Ver Inventario"
+              className="w-full h-40 text-xl bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
+              aria-label="Ver Bindcards"
             >
               <LayoutList className="h-16 w-16 mb-3" />
-              Inventario
+              Bindcards
             </Button>
           </Link>
         </CardContent>

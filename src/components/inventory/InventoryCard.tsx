@@ -21,7 +21,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // AlertDialogTrigger removed as it's not used standalone here
+} from "@/components/ui/alert-dialog";
 import type { Timestamp } from 'firebase/firestore';
 
 interface InventoryCardProps {
@@ -100,7 +100,23 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       const entrada = record.type === 'stocked' ? record.quantity : '';
       const salida = record.type === 'dispensed' ? record.quantity : '';
       const recordDateJs = (record.date as Timestamp).toDate();
-      const recordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
+      
+      let recordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
+      if (record.type === 'dispensed' && !recordExpDateJs && clientNow) {
+        const relevantStockEntries = medicine.dispensingHistory
+          .filter(
+            (histEntry) =>
+              histEntry.type === 'stocked' &&
+              histEntry.expirationDate &&
+              (histEntry.date as Timestamp).toMillis() <= (record.date as Timestamp).toMillis() &&
+              (histEntry.expirationDate as Timestamp).toDate() > clientNow
+          )
+          .sort((a, b) => (a.expirationDate as Timestamp).toMillis() - (b.expirationDate as Timestamp).toMillis());
+
+        if (relevantStockEntries.length > 0) {
+          recordExpDateJs = (relevantStockEntries[0].expirationDate as Timestamp).toDate();
+        }
+      }
       
       const fechaExp = recordExpDateJs ? format(recordExpDateJs, 'MM/yy', { locale: es }) : 'N/A';
 
@@ -239,56 +255,73 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
 
           <div>
             <h4 className="font-medium text-sm md:text-base text-foreground mb-2">Historial de Transacciones:</h4>
-            <div className="overflow-auto rounded-md border max-h-60 bg-card p-px">
+            <div className="overflow-auto rounded-md border border-primary/30 max-h-60 bg-green-50 dark:bg-green-900/20 p-px">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10">
-                  <tr className="h-10 bg-muted shadow-md">
-                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Fecha</th>
-                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">
+                  <tr className="h-10 bg-primary text-primary-foreground shadow-md">
+                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Fecha</th>
+                    <th className="min-w-[70px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">
                       Pedidos
                     </th>
-                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Entrada</th>
-                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Salida</th>
-                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">Saldo</th>
-                    <th className="min-w-[85px] px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap border-r border-border">
+                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Entrada</th>
+                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Salida</th>
+                    <th className="min-w-[60px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">Saldo</th>
+                    <th className="min-w-[85px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/40">
                       Fecha Exp.
                     </th>
-                    <th className="px-0 py-2 text-center align-middle font-medium text-muted-foreground whitespace-nowrap min-w-[100px]">Usuario</th>
+                    <th className="px-0 py-2 text-center align-middle font-medium whitespace-nowrap min-w-[100px]">Usuario</th>
                   </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-b-0">
                   {displayHistory.map((record) => {
                     const recordDateJs = (record.date as Timestamp).toDate();
-                    const recordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
-                    const isCurrentlyExpired = clientNow && recordExpDateJs && isExpiredClient(recordExpDateJs, clientNow);
-                    const isExpiringSoon = clientNow && recordExpDateJs && isExpiringSoonClient(recordExpDateJs, clientNow);
+                    
+                    let inferredRecordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
+                    if (record.type === 'dispensed' && !inferredRecordExpDateJs && clientNow) {
+                      const relevantStockEntries = medicine.dispensingHistory
+                        .filter(
+                          (histEntry) =>
+                            histEntry.type === 'stocked' &&
+                            histEntry.expirationDate &&
+                            (histEntry.date as Timestamp).toMillis() <= (record.date as Timestamp).toMillis() &&
+                            (histEntry.expirationDate as Timestamp).toDate() > clientNow
+                        )
+                        .sort((a, b) => (a.expirationDate as Timestamp).toMillis() - (b.expirationDate as Timestamp).toMillis());
+
+                      if (relevantStockEntries.length > 0) {
+                        inferredRecordExpDateJs = (relevantStockEntries[0].expirationDate as Timestamp).toDate();
+                      }
+                    }
+
+                    const isCurrentlyExpired = clientNow && inferredRecordExpDateJs && isExpiredClient(inferredRecordExpDateJs, clientNow);
+                    const isExpiringSoon = clientNow && inferredRecordExpDateJs && isExpiringSoonClient(inferredRecordExpDateJs, clientNow);
 
                     return (
                       <tr
                         key={record.id}
                         className={cn(
-                          "border-b border-border",
-                          isCurrentlyExpired ? 'bg-red-100 dark:bg-red-900/30' : ''
+                          "border-b border-primary/30",
+                          isCurrentlyExpired ? 'bg-red-100 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-primary/20'
                         )}
                       >
-                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
-                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-border">{record.rxNumber}</td>
-                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-600 font-medium whitespace-nowrap text-xs border-r border-border">
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30">{record.rxNumber}</td>
+                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-700 dark:text-green-400 font-medium whitespace-nowrap text-xs border-r border-primary/30">
                           {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-red-600 font-medium whitespace-nowrap text-xs border-r border-border">
+                        <td className="min-w-[60px] text-center px-0 py-2 align-middle text-red-600 dark:text-red-400 font-medium whitespace-nowrap text-xs border-r border-primary/30">
                           {record.type === 'dispensed' ? <><TrendingDown className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
-                        <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-border">{record.balance}</td>
-                        <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-border text-center justify-center">
+                        <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-primary/30">{record.balance}</td>
+                        <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-primary/30 text-center justify-center">
                           <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
-                                  isCurrentlyExpired ? "text-red-500" :
-                                  isExpiringSoon ? "text-orange-500" : "text-muted-foreground"
+                                  isCurrentlyExpired ? "text-red-500 dark:text-red-400" :
+                                  isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-muted-foreground"
                               )}>
                               {isCurrentlyExpired && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
                               {isExpiringSoon && !isCurrentlyExpired && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                              {recordExpDateJs && !isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600" title="Vigente"/>}
-                              {recordExpDateJs ? format(recordExpDateJs, 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
+                              {inferredRecordExpDateJs && !isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600 dark:text-green-400" title="Vigente"/>}
+                              {inferredRecordExpDateJs ? format(inferredRecordExpDateJs, 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
                             </div>
                         </td>
                         <td className="min-w-[100px] py-2 px-0 align-middle whitespace-nowrap text-center">
