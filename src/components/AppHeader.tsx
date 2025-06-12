@@ -20,8 +20,8 @@ export default function AppHeader() {
         </Link>
         <div className="flex items-center space-x-2"> 
           <Button
-            variant="outline" // Kept outline, or can be ghost if no border is preferred by default
-            className="text-primary border-primary/50 hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
+            variant="ghost" // Changed to ghost for transparent background by default
+            className="text-primary hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
             onClick={() => router.push('/dashboard')}
             aria-label="Inicio"
           >
@@ -29,9 +29,9 @@ export default function AppHeader() {
             Inicio
           </Button>
           <Button 
-            variant="outline" // Kept outline, or can be ghost
+            variant="ghost" // Changed to ghost for transparent background by default
             onClick={logout} 
-            className="text-primary border-primary/50 hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
+            className="text-primary hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
             aria-label="Salir"
           >
             <LogOut className="mr-2 h-5 w-5" />
@@ -42,3 +42,4 @@ export default function AppHeader() {
     </header>
   );
 }
+
