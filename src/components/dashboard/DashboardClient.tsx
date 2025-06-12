@@ -66,7 +66,7 @@ export default function DashboardClient() {
               className="w-full h-40 text-xl bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Escanear Medicamento"
             >
-              <QrCode className="h-16 w-16 mb-3" />
+              <QrCode className="h-20 w-20 mb-3" /> {/* Cambiado de h-16 w-16 */}
               <span>Escanear</span>
               <span>Medicamento</span>
             </Button>
@@ -77,7 +77,7 @@ export default function DashboardClient() {
               className="w-full h-40 text-xl bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Ver Bindcards"
             >
-              <LayoutList className="h-16 w-16 mb-3" />
+              <LayoutList className="h-20 w-20 mb-3" /> {/* Cambiado de h-16 w-16 */}
               Bindcards
             </Button>
           </Link>
@@ -100,3 +100,4 @@ export default function DashboardClient() {
     </div>
   );
 }
+
