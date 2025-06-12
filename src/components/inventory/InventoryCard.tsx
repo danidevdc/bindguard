@@ -1,12 +1,12 @@
 
 "use client";
 
-import type { Medicine, DispensingRecord } from '@/lib/medicineService'; 
+import type { Medicine, DispensingRecord } from '@/lib/medicineService';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download, QrCode, PowerOff } from 'lucide-react';
-import { format, compareAsc } from 'date-fns'; 
+import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingDown, ShieldAlert, ShieldCheck, Download, QrCode, PowerOff, Trash2, Loader2 } from 'lucide-react';
+import { format, compareAsc } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
@@ -15,29 +15,36 @@ import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { Timestamp } from 'firebase/firestore';
+import { deleteDispensingRecord } from '@/lib/medicineService';
 
 interface InventoryCardProps {
   medicine: Medicine;
+  isAdminView?: boolean;
+  onRefreshNeeded?: () => void;
 }
 
 interface ProcessedRecord extends DispensingRecord {
   balance: number;
 }
 
-export default function InventoryCard({ medicine }: InventoryCardProps) {
+export default function InventoryCard({ medicine, isAdminView = false, onRefreshNeeded }: InventoryCardProps) {
   const stockLevelAlertThreshold = 10;
   const [clientNow, setClientNow] = useState<Date | null>(null);
   const { toast } = useToast();
   const [qrDialogMedicine, setQrDialogMedicine] = useState<Medicine | null>(null);
   const qrCodeRef = useRef<HTMLDivElement>(null);
+  const [recordToDelete, setRecordToDelete] = useState<DispensingRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
 
   useEffect(() => {
@@ -71,7 +78,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
   const isExpiringSoonClient = (expirationDateInput: Date | undefined, comparisonDate: Date, daysThreshold = 90): boolean => {
     if (!expirationDateInput) return false;
     if (!comparisonDate || isNaN(comparisonDate.getTime())) return false;
-    
+
     const diffTime = expirationDateInput.getTime() - comparisonDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 && diffDays <= daysThreshold;
@@ -100,7 +107,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       const entrada = record.type === 'stocked' ? record.quantity : '';
       const salida = record.type === 'dispensed' ? record.quantity : '';
       const recordDateJs = (record.date as Timestamp).toDate();
-      
+
       let recordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
       if (record.type === 'dispensed' && !recordExpDateJs && clientNow) {
         const relevantStockEntries = medicine.dispensingHistory
@@ -117,7 +124,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           recordExpDateJs = (relevantStockEntries[0].expirationDate as Timestamp).toDate();
         }
       }
-      
+
       const fechaExp = recordExpDateJs ? format(recordExpDateJs, 'MM/yy', { locale: es }) : 'N/A';
 
       dataForExcel.push([
@@ -141,11 +148,11 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     if(worksheet['A2']) worksheet['A2'].s = headerCellStyle;
     if(worksheet['A3']) worksheet['A3'].s = headerCellStyle;
     if(worksheet['A4']) worksheet['A4'].s = headerCellStyle;
-    if(worksheet['A5']) worksheet['A5'].s = headerCellStyle; // For Estado
-    if(worksheet['A7']) worksheet['A7'].s = headerCellStyle; // For Historial Header
+    if(worksheet['A5']) worksheet['A5'].s = headerCellStyle;
+    if(worksheet['A7']) worksheet['A7'].s = headerCellStyle;
 
 
-    const historyHeaderRowIndex = 7; 
+    const historyHeaderRowIndex = 7;
     ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach((colLetter) => {
       const cellAddress = `${colLetter}${historyHeaderRowIndex}`;
       if (worksheet[cellAddress]) {
@@ -164,7 +171,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
       description: `El archivo ${fileName} se está descargando.`,
     });
   };
-  
+
   const handleDownloadQR = () => {
     if (qrCodeRef.current) {
       const canvas = qrCodeRef.current.querySelector('canvas');
@@ -184,9 +191,33 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
     }
   };
 
+  const handleDeleteRecord = async () => {
+    if (!recordToDelete || !onRefreshNeeded) return;
+    setIsDeleting(true);
+    try {
+      await deleteDispensingRecord(medicine.id, recordToDelete.id);
+      toast({
+        title: "Registro Eliminado",
+        description: `El movimiento ha sido eliminado del historial. El stock ha sido recalculado.`,
+      });
+      onRefreshNeeded(); // Call the refresh function passed from parent
+    } catch (error) {
+      console.error("Error deleting record:", error);
+      toast({
+        title: "Error al Eliminar",
+        description: error instanceof Error ? error.message : "No se pudo eliminar el registro.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
+  };
+
 
   return (
     <>
+    <AlertDialog open={!!recordToDelete} onOpenChange={(isOpen) => { if (!isOpen) setRecordToDelete(null); }}>
       <Card className={cn("flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300", medicine.isBlocked && "border-destructive border-2")}>
         <CardHeader className="pb-3 md:pb-4 flex flex-row justify-between items-start">
           <div>
@@ -209,8 +240,8 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                 )}
             </div>
           </div>
-          
-          <div className="flex flex-col items-end gap-1.5"> 
+
+          <div className="flex flex-col items-end gap-1.5">
              <Button
                 onClick={() => setQrDialogMedicine(medicine)}
                 size="sm"
@@ -234,8 +265,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
             </div>
         </CardHeader>
         <CardContent className="flex-grow space-y-3 md:space-y-4 px-2 py-3 sm:px-4 sm:py-3 md:p-6">
-          
-          {/* Sección Stock Actual */}
+
           <div className="flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-md shadow-md">
             <div className="flex items-center space-x-2 text-foreground">
               <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-primary" />
@@ -268,13 +298,14 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                     <th className="min-w-[85px] px-0 py-2 text-center align-middle font-medium whitespace-nowrap border-r border-primary/50 dark:border-green-600/70">
                       Fecha Exp.
                     </th>
-                    <th className="px-0 py-2 text-center align-middle font-medium whitespace-nowrap min-w-[100px]">Usuario</th>
+                    <th className="px-0 py-2 text-center align-middle font-medium whitespace-nowrap min-w-[100px] border-r border-primary/50 dark:border-green-600/70">Usuario</th>
+                    {isAdminView && <th className="px-0 py-2 text-center align-middle font-medium whitespace-nowrap min-w-[60px]">Acción</th>}
                   </tr>
                 </thead>
                 <tbody className="[&_tr:last-child]:border-b-0">
                   {displayHistory.map((record) => {
                     const recordDateJs = (record.date as Timestamp).toDate();
-                    
+
                     let inferredRecordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
                     if (record.type === 'dispensed' && !inferredRecordExpDateJs && clientNow) {
                       const relevantStockEntries = medicine.dispensingHistory
@@ -323,12 +354,28 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                               {inferredRecordExpDateJs ? format(inferredRecordExpDateJs, 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
                             </div>
                         </td>
-                        <td className="min-w-[100px] py-2 px-0 align-middle whitespace-nowrap text-center">
+                        <td className="min-w-[100px] py-2 px-0 align-middle whitespace-nowrap text-center border-r border-primary/30 dark:border-green-700/50">
                           <div className="flex items-center justify-center gap-1 text-xs">
                             <UserCircle className="h-3 md:h-3.5 w-3 md:w-3.5 text-muted-foreground shrink-0"/>
                             {record.userName || 'N/A'}
                           </div>
                         </td>
+                        {isAdminView && (
+                          <td className="min-w-[60px] py-2 px-0 align-middle whitespace-nowrap text-center">
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
+                                onClick={() => setRecordToDelete(record)}
+                                disabled={isDeleting}
+                                title="Eliminar este movimiento"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -366,7 +413,7 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
                   nombre: qrDialogMedicine.name,
                   presentacion: qrDialogMedicine.presentation,
                 })}
-                size={240} 
+                size={240}
                 bgColor={"#ffffff"}
                 fgColor={"#000000"}
                 level={"L"}
@@ -383,8 +430,36 @@ export default function InventoryCard({ medicine }: InventoryCardProps) {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {isAdminView && recordToDelete && (
+           <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Eliminación de Movimiento</AlertDialogTitle>
+                <AlertDialogDescription>
+                  ¿Estás seguro de que quieres eliminar este movimiento del historial?
+                  <br />
+                  <strong>Tipo:</strong> <span className="font-semibold">{recordToDelete?.type === 'stocked' ? 'Entrada' : 'Salida'}</span>
+                  <br />
+                  <strong>Cantidad:</strong> <span className="font-semibold">{recordToDelete?.quantity}</span>
+                  <br />
+                  <strong>Fecha:</strong> <span className="font-semibold">{recordToDelete ? format((recordToDelete.date as Timestamp).toDate(), 'dd/MM/yy HH:mm', { locale: es }) : ''}</span>
+                  <br />
+                  Esta acción recalculará el stock actual del medicamento <strong className="text-foreground">{medicine.name}</strong> y no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setRecordToDelete(null)} disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteRecord}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Eliminar Movimiento"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+      )}
+      </AlertDialog>
     </>
   );
 }
-    
-
