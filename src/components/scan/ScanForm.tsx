@@ -633,12 +633,11 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         <CardContent>
           <form onSubmit={handleStartPrescription} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="prescriptionNumberInput">Número de Receta</Label>
               <Input
                 id="prescriptionNumberInput"
                 type="text"
                 inputMode="numeric"
-                placeholder="Nº"
+                placeholder="Ingrese Nº de Receta"
                 value={prescriptionNumber}
                 onChange={(e) => setPrescriptionNumber(e.target.value.replace(/\D/g, ''))}
                 required
@@ -646,8 +645,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
               />
             </div>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-md py-3">
-              <ArrowRight className="mr-2 h-5 w-5" />
-              Siguiente
+              OK
             </Button>
           </form>
         </CardContent>
@@ -824,10 +822,15 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                 </div>
                 <DialogFooter className="gap-3 sm:gap-2">
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" onClick={() => {
-                            setCurrentScannedCode('');
-                            setManualCodeInputValue('');
-                        }}>
+                         <Button
+                            type="button"
+                            variant="outline"
+                            className="hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => {
+                                setCurrentScannedCode('');
+                                setManualCodeInputValue('');
+                            }}
+                        >
                             Cancelar
                         </Button>
                     </DialogClose>
@@ -841,7 +844,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                         disabled={!currentScannedCode.trim()}
                     >
                         <CheckCircle className="mr-2 h-5 w-5" />
-                        Verificar y Continuar
+                        OK
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -967,4 +970,5 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
+
 
