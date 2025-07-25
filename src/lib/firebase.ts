@@ -1,6 +1,6 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 // Ensure environment variables are being loaded. You might need to restart your dev server
 // if you've recently created or modified the .env.local file.
@@ -42,6 +42,15 @@ if (missingKeys.length > 0) {
     try {
       db = getFirestore(app);
       console.log("Firestore instance obtained successfully.");
+
+      // Check for an environment variable to decide whether to connect to the emulator.
+      // This is a common pattern for local development.
+      if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+        console.log("Connecting to Firebase Emulator...");
+        // Default host and port for Firestore emulator are localhost:8080
+        connectFirestoreEmulator(db, 'localhost', 8080);
+        console.log("Successfully connected to Firebase Emulator.");
+      }
     } catch (error: any) {
       console.error("Firestore instance initialization error:", error.message, error.code);
       // db will remain undefined if Firestore initialization fails
