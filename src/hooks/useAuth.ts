@@ -131,12 +131,15 @@ export function useAuth() {
 
       // Step 2: Create user document in Firestore
       const newUserDocRef = doc(db, 'users', user.uid);
+      
+      const isAdmin = email.toLowerCase() === 'daniish77@gmail.com';
+
       const newUser: Omit<UserData, 'createdAt'> = {
         uid: user.uid,
         email: user.email,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        isAdmin: false, // All new users are not admins by default
+        isAdmin: isAdmin,
         activityLog: [],
       };
       await setDoc(newUserDocRef, {
@@ -145,7 +148,11 @@ export function useAuth() {
       });
 
       const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
-      toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}.` });
+      if(isAdmin){
+         toast({ title: "Registro de Admin Exitoso", description: `Cuenta de Administrador creada para ${capitalizedFirstName}.` });
+      } else {
+         toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}.` });
+      }
       router.push('/login');
 
     } catch (error: any) {
