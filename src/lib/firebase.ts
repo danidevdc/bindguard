@@ -15,7 +15,7 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let db: Firestore;
-let auth: Auth; // Declare auth variable
+let auth: Auth; 
 
 // Check if all necessary Firebase config keys are present
 const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
@@ -39,39 +39,16 @@ if (missingKeys.length > 0) {
   // Get Auth instance
   auth = getAuth(app);
 
-  // Connect to Emulators if in development and the flag is set
-  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
-    // Connect to Firestore Emulator
-    if (!(global as any)._firestoreEmulatorConnected) {
-      console.log("Connecting to Firebase Firestore Emulator at localhost:8080...");
-      try {
-        connectFirestoreEmulator(db, 'localhost', 8080);
-        (global as any)._firestoreEmulatorConnected = true;
-        console.log("Successfully connected to Firestore Emulator.");
-      } catch (e: any) {
-         if (e.code === 'failed-precondition') {
-          console.warn("Firestore Emulator connection may have already been established.");
-        } else {
-          console.error("An error occurred while connecting to the Firestore Emulator:", e);
-        }
-      }
-    }
-    
-    // Connect to Auth Emulator
-    if (!(global as any)._authEmulatorConnected) {
-       console.log("Connecting to Firebase Auth Emulator at http://localhost:9099...");
-       try {
-        connectAuthEmulator(auth, "http://localhost:9099");
-        (global as any)._authEmulatorConnected = true;
-        console.log("Successfully connected to Auth Emulator.");
-       } catch (e: any) {
-         if (e.code === 'auth/emulator-config-failed') {
-          console.warn("Auth Emulator connection may have already been established.");
-        } else {
-          console.error("An error occurred while connecting to the Auth Emulator:", e);
-        }
-       }
-    }
+  // NOTE: Emulator connection logic is temporarily disabled to resolve connection issues.
+  // The application will connect directly to the cloud instances of Firebase services.
+  const useEmulators = false; // Set to false to force connection to cloud services
+  
+  if (process.env.NODE_ENV === 'development' && useEmulators) {
+    // This block is currently disabled.
+    console.log("Connecting to Firebase Emulators (currently disabled, connecting to cloud)...");
+    // To re-enable, set useEmulators to true and ensure Firebase Emulators are running.
+    // connectFirestoreEmulator(db, 'localhost', 8080);
+    // connectAuthEmulator(auth, "http://localhost:9099");
   } else {
     console.log("Connecting to production Cloud Firestore and Firebase Auth.");
   }
