@@ -4,34 +4,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an administrator
-    function isUserAdmin() {
-      // Get the user's document from the 'users' collection using their UID
-      // and check if the 'isAdmin' field is true.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    // Helper function to check if the requesting user is an admin.
+    // It checks the 'isAdmin' field on the user's own document.
+    function isRequestingUserAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // READ: 
-      // 1. A user can read their own document.
-      // 2. An admin user can read any user's document.
-      allow read: if request.auth.uid == userId || isUserAdmin();
+      // CREATE: An authenticated user can create their own user document.
+      // This is essential for the sign-up process to work.
+      // The `request.auth.uid` must match the `userId` of the document being created.
+      allow create: if request.auth != null && request.auth.uid == userId;
 
-      // CREATE:
-      // A user can create their own document upon registration.
-      // The userId must match their authentication UID.
-      allow create: if request.auth.uid == userId;
+      // READ: An authenticated user can read their own document.
+      // An admin user can read any user's document.
+      allow read: if (request.auth != null && request.auth.uid == userId) || isRequestingUserAdmin();
+
+      // UPDATE: An authenticated user can update their own document, but they cannot
+      // change their 'isAdmin' status. This prevents users from promoting themselves.
+      allow update: if request.auth != null && request.auth.uid == userId && !("isAdmin" in request.resource.data);
       
-      // UPDATE:
-      // 1. A user can update their own document.
-      // 2. They cannot make themselves an admin.
-      allow update: if request.auth.uid == userId && !("isAdmin" in request.resource.data);
-
-      // DELETE:
-      // Only an administrator can delete a user document.
-      // Users are not allowed to delete their own records from the client.
-      allow delete: if isUserAdmin();
+      // DELETE: Only admins should be able to delete user documents (not implemented on client for safety).
+      allow delete: if isRequestingUserAdmin();
     }
 
     // Rules for the 'medicines' collection
@@ -39,10 +35,8 @@ service cloud.firestore {
       // READ: Any authenticated user can read medicine data.
       allow read: if request.auth != null;
 
-      // WRITE (Create, Update, Delete):
-      // Only administrators can create, modify, or delete medicine records.
-      // This protects inventory integrity.
-      allow write: if isUserAdmin();
+      // WRITE (create, update, delete): Only admins can modify medicine data.
+      allow write: if isRequestingUserAdmin();
     }
   }
 }
