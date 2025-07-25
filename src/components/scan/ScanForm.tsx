@@ -627,7 +627,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         <CardHeader>
           <CardTitle className="text-xl text-center flex items-center justify-center">
             <FileText className="mr-2 h-6 w-6 text-primary" />
-            Nº de Receta
+            Ingrese Nº de Receta
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -637,7 +637,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                 id="prescriptionNumberInput"
                 type="text"
                 inputMode="numeric"
-                placeholder="Ingrese Nº de Receta"
+                placeholder="Nº de Receta"
                 value={prescriptionNumber}
                 onChange={(e) => setPrescriptionNumber(e.target.value.replace(/\D/g, ''))}
                 required
@@ -811,7 +811,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                         Verificar Medicamento
                     </DialogTitle>
                     <DialogDescription className="pt-1">
-                        Se ha detectado el siguiente código. Confirma para añadirlo a la receta.
+                        Confirma para añadirlo a la receta
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-6">
@@ -904,12 +904,12 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         <CardHeader className="text-center">
           <CardTitle className="text-xl flex items-center justify-center">
             <ClipboardList className="mr-2 h-6 w-6 text-primary" />
-            Revisa que la receta esté correcta
+            Resumen Receta
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md border">
-            <p>Nº de Receta: <strong className="text-foreground">{prescriptionNumber}</strong></p>
+            <p>Receta Nro: <strong className="text-foreground">{prescriptionNumber}</strong></p>
             <p>Fecha: <strong className="text-foreground">{recipeDate ? format(recipeDate, "dd/MM/yyyy", { locale: es }) : 'N/A'}</strong></p>
           </div>
 
