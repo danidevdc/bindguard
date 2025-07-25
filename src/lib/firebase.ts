@@ -1,9 +1,6 @@
-
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 
-// Ensure environment variables are being loaded. You might need to restart your dev server
-// if you've recently created or modified the .env.local file.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -11,53 +8,58 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-let app: FirebaseApp | undefined = undefined;
-let db: Firestore | undefined = undefined;
+function initializeFirebase() {
+  const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
+  const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
 
-// Check if all critical Firebase config keys are present
-const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
-const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
+  if (missingKeys.length > 0) {
+    console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file.`);
+    return { app: null, db: null };
+  }
 
-if (missingKeys.length > 0) {
-  console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file and ensure all NEXT_PUBLIC_FIREBASE_ variables are set.`);
-  // If critical keys are missing, app and db will remain undefined.
-} else {
-  if (!getApps().length) {
-    try {
-      app = initializeApp(firebaseConfig);
-      console.log("Firebase app initialized successfully.");
-    } catch (error: any) {
-      console.error("Firebase app initialization error:", error.message, error.code);
-      // app will remain undefined if initialization fails
-    }
+  let app: FirebaseApp;
+  let db: Firestore;
+
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+    console.log("Firebase App Initialized.");
   } else {
     app = getApps()[0];
-    console.log("Firebase app already initialized.");
+    console.log("Firebase App already exists. Getting instance.");
   }
 
-  if (app) { // Only try to get Firestore if app was successfully initialized/obtained
-    try {
-      db = getFirestore(app);
-      console.log("Firestore instance obtained successfully.");
+  db = getFirestore(app);
+  console.log("Firestore instance obtained.");
 
-      // Check for an environment variable to decide whether to connect to the emulator.
-      // This is a common pattern for local development.
-      if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
-        console.log("Connecting to Firebase Emulator...");
-        // Default host and port for Firestore emulator are localhost:8080
+  // This block connects to the emulator if the environment variable is set.
+  // This is a common pattern for local development to avoid issues with production data or expired security rules.
+  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+    try {
+      // It's important to only connect to the emulator once.
+      // The Firestore SDK manages the connection state internally.
+      // We check a global flag to prevent re-connection attempts on hot reloads.
+      if (!(global as any)._firestoreEmulatorConnected) {
+        console.log("Connecting to Firebase Emulator at localhost:8080...");
         connectFirestoreEmulator(db, 'localhost', 8080);
+        (global as any)._firestoreEmulatorConnected = true;
         console.log("Successfully connected to Firebase Emulator.");
       }
-    } catch (error: any) {
-      console.error("Firestore instance initialization error:", error.message, error.code);
-      // db will remain undefined if Firestore initialization fails
+    } catch (e: any) {
+        // This might happen if you try to connect after data has been read, which is a Firestore limitation.
+        if (e.code === 'failed-precondition') {
+            console.warn("Firestore Emulator already running or failed to connect. This is usually fine during hot-reloads.");
+        } else {
+            console.error("An error occurred while connecting to the Firebase Emulator:", e);
+        }
     }
-  } else {
-    console.error("Firebase app is not available, Firestore instance cannot be obtained. This usually means the Firebase config in .env.local is missing or incorrect.");
   }
+
+  return { app, db };
 }
+
+const { app, db } = initializeFirebase();
 
 export { db, app };
