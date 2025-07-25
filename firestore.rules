@@ -1,13 +1,48 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This development rule allows anyone to read and write to your database.
-    // It is NOT secure for production.
-    // Make sure to write proper security rules for your app before going live.
-    match /{document=**} {
-      allow read, write: if true;
+    // Helper function to check if a user is an administrator
+    function isUserAdmin() {
+      // Get the user's document from the 'users' collection using their UID
+      // and check if the 'isAdmin' field is true.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // READ: 
+      // 1. A user can read their own document.
+      // 2. An admin user can read any user's document.
+      allow read: if request.auth.uid == userId || isUserAdmin();
+
+      // CREATE:
+      // A user can create their own document upon registration.
+      // The userId must match their authentication UID.
+      allow create: if request.auth.uid == userId;
+      
+      // UPDATE:
+      // 1. A user can update their own document.
+      // 2. They cannot make themselves an admin.
+      allow update: if request.auth.uid == userId && !("isAdmin" in request.resource.data);
+
+      // DELETE:
+      // Only an administrator can delete a user document.
+      // Users are not allowed to delete their own records from the client.
+      allow delete: if isUserAdmin();
+    }
+
+    // Rules for the 'medicines' collection
+    match /medicines/{medicineId} {
+      // READ: Any authenticated user can read medicine data.
+      allow read: if request.auth != null;
+
+      // WRITE (Create, Update, Delete):
+      // Only administrators can create, modify, or delete medicine records.
+      // This protects inventory integrity.
+      allow write: if isUserAdmin();
     }
   }
 }
