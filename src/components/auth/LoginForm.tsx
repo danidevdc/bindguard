@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginForm() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuth();
@@ -20,15 +20,15 @@ export default function LoginForm() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!username || !password) {
+    if (!email || !password) {
       toast({
         title: "Error de Inicio de Sesión",
-        description: "Por favor, ingresa usuario y contraseña.",
+        description: "Por favor, ingresa correo y contraseña.",
         variant: "destructive",
       });
       return;
     }
-    await login(username, password);
+    await login(email, password);
   };
 
   return (
@@ -40,16 +40,19 @@ export default function LoginForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="username">Usuario</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Ingresa tu usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="bg-background"
-            />
+            <Label htmlFor="email">Correo Electrónico</Label>
+             <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                id="email"
+                type="email"
+                placeholder="tu.correo@ejemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-background pl-10"
+                />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>

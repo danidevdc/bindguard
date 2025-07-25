@@ -34,7 +34,7 @@ export default function ManageUsersPage() {
     isLoading: authLoading,
     getUsersFromFirestore,
     deleteUserFromFirestore,
-    getCurrentUserUsername
+    firebaseUser,
   } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -42,7 +42,8 @@ export default function ManageUsersPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [userToViewLog, setUserToViewLog] = useState<UserData | null>(null);
-  const loggedInUsername = getCurrentUserUsername();
+  
+  const loggedInUserUid = firebaseUser?.uid;
 
   const loadUsers = useCallback(async (showToastOnSuccess = false) => {
     setIsLoadingUsers(true);
@@ -85,9 +86,9 @@ export default function ManageUsersPage() {
   }, [isCurrentUserAdmin, authLoading, router, toast, loadUsers]);
 
   const handleDeleteUser = async () => {
-    if (!userToDelete || !userToDelete.firestoreId) return;
+    if (!userToDelete || !userToDelete.uid) return;
 
-    if (userToDelete.username === loggedInUsername) {
+    if (userToDelete.uid === loggedInUserUid) {
       toast({
         title: 'Acción no permitida',
         description: 'No puedes eliminar tu propia cuenta.',
@@ -98,7 +99,7 @@ export default function ManageUsersPage() {
     }
 
     const adminUsers = users.filter(u => u.isAdmin);
-    if (userToDelete.isAdmin && adminUsers.length === 1 && adminUsers[0].username === userToDelete.username) {
+    if (userToDelete.isAdmin && adminUsers.length <= 1) {
         toast({
             title: 'Acción no permitida',
             description: 'No puedes eliminar al único administrador del sistema.',
@@ -108,19 +109,9 @@ export default function ManageUsersPage() {
         return;
     }
 
-    if (userToDelete.username === 'admin.admin' && userToDelete.isAdmin && adminUsers.length <= 1) {
-       toast({
-          title: 'Acción no permitida',
-          description: 'No puedes eliminar la cuenta "admin.admin" si es el único administrador.',
-          variant: 'destructive',
-      });
-      setUserToDelete(null);
-      return;
-    }
-
-
     try {
-      await deleteUserFromFirestore(userToDelete.firestoreId);
+      // This only deletes the Firestore record, not the Auth user.
+      await deleteUserFromFirestore(userToDelete.uid);
       loadUsers();
     } catch (error) {
       console.error("Failed to delete user:", error);
@@ -175,8 +166,7 @@ export default function ManageUsersPage() {
                 Gestionar Usuarios
               </CardTitle>
               <CardDescription>
-                Ver, eliminar y revisar actividad de usuarios registrados.
-                El estado activo/inactivo en tiempo real no está disponible.
+                Ver, eliminar y revisar actividad de usuarios registrados. La eliminación solo borra el registro de la base de datos, no la cuenta de autenticación.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
@@ -190,7 +180,7 @@ export default function ManageUsersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Usuario</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead>Nombre Completo</TableHead>
                         <TableHead>Rol</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
@@ -198,8 +188,8 @@ export default function ManageUsersPage() {
                     </TableHeader>
                     <TableBody>
                       {users.map((user) => (
-                        <TableRow key={user.firestoreId || user.username}>
-                          <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableRow key={user.uid}>
+                          <TableCell className="font-medium">{user.email}</TableCell>
                           <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
                           <TableCell>
                             {user.isAdmin ? (
@@ -218,25 +208,21 @@ export default function ManageUsersPage() {
                                 size="icon"
                                 className="text-blue-600 hover:bg-blue-600/10 hover:text-blue-700"
                                 onClick={() => setUserToViewLog(user)}
-                                title={`Ver actividad de ${user.username}`}
+                                title={`Ver actividad de ${user.email}`}
                             >
                                 <History className="h-4 w-4" />
                             </Button>
-                            {user.username !== loggedInUsername && (
+                            {user.uid !== loggedInUserUid && (
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                                   onClick={() => setUserToDelete(user)}
-                                  disabled={
-                                    (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
-                                    (user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.username === users.find(u => u.isAdmin)?.username)
-                                  }
+                                  disabled={user.isAdmin && users.filter(u => u.isAdmin).length <= 1}
                                   title={
-                                    (user.username === 'admin.admin' && user.isAdmin && users.filter(u => u.isAdmin).length <=1) ||
-                                    (user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.username === users.find(u => u.isAdmin)?.username) ?
-                                    'No se puede eliminar al único administrador' : `Eliminar ${user.username}`
+                                    (user.isAdmin && users.filter(u => u.isAdmin).length <= 1) ?
+                                    'No se puede eliminar al único administrador' : `Eliminar ${user.email}`
                                   }
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -263,7 +249,7 @@ export default function ManageUsersPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirmar Eliminación</AlertDialogTitle>
                 <AlertDialogDescription>
-                  ¿Estás seguro de que quieres eliminar al usuario "{userToDelete.firstName} {userToDelete.lastName}" ({userToDelete.username})? Esta acción no se puede deshacer.
+                  ¿Estás seguro de que quieres eliminar el registro del usuario "{userToDelete.firstName} {userToDelete.lastName}" ({userToDelete.email})? Esta acción no se puede deshacer y solo elimina los datos de la app, no la cuenta de acceso.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -284,7 +270,7 @@ export default function ManageUsersPage() {
               <DialogHeader>
                 <DialogTitle className="flex items-center">
                     <FileText className="mr-2 h-5 w-5 text-primary" />
-                    Log de Actividad para: {userToViewLog.username}
+                    Log de Actividad para: {userToViewLog.email}
                 </DialogTitle>
                 <DialogDescription>
                   Historial de acciones relevantes para este usuario.

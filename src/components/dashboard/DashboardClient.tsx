@@ -9,46 +9,22 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 
 export default function DashboardClient() {
-  const { currentUser, isCurrentUserAdmin, getCurrentUserDetails } = useAuth(); 
+  const { isCurrentUserAdmin, currentUserData } = useAuth(); 
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchAndSetDisplayName = async () => {
-      const userDetails = await getCurrentUserDetails(); // Use async/await for clarity
-      if (userDetails) {
-          if (userDetails.username === 'admin.admin') {
-              setDisplayName('Admin');
-          } else if (typeof userDetails.firstName === 'string' && userDetails.firstName.trim() !== '') {
-              const firstName = userDetails.firstName;
-              const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-              setDisplayName(capitalizedFirstName);
-          } else {
-              // Fallback if firstName is not a valid string or is empty
-              setDisplayName(userDetails.username || "Usuario"); 
-          }
-      } else if (currentUser) { 
-          // Fallback to currentUser if userDetails are null but currentUser (username string) exists
-          // This part might be less common if getCurrentUserDetails always returns something or null
-          const username = typeof currentUser === 'string' ? currentUser : currentUser.username;
-          if (username) {
-            const nameParts = username.split('.');
-            if (nameParts.length > 0 && nameParts[0]) {
-                const firstNamePart = nameParts[0];
-                const capitalizedFirstName = firstNamePart.charAt(0).toUpperCase() + firstNamePart.slice(1).toLowerCase();
-                setDisplayName(capitalizedFirstName);
-            } else {
-                setDisplayName(username); // Use full username if splitting fails
-            }
-          } else {
-             setDisplayName("Bienvenido"); // Generic fallback
-          }
+      if (currentUserData) {
+        if (currentUserData.firstName && currentUserData.firstName.trim() !== '') {
+            const firstName = currentUserData.firstName;
+            const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+            setDisplayName(capitalizedFirstName);
+        } else {
+            setDisplayName(currentUserData.email || "Usuario");
+        }
       } else {
-        setDisplayName("Bienvenido"); // Most generic fallback
+        setDisplayName("Bienvenido");
       }
-    };
-
-    fetchAndSetDisplayName();
-  }, [currentUser, getCurrentUserDetails]);
+  }, [currentUserData]);
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -66,7 +42,7 @@ export default function DashboardClient() {
               className="w-full h-40 text-xl bg-purple-600 hover:bg-purple-600/90 text-white flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
               aria-label="Escanear Receta"
             >
-              <ScanSearch className="h-20 w-20 mb-3" />
+              <ScanSearch className="h-16 w-16 mb-3" />
               Escanear
               Receta
             </Button>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserPlus, Eye, EyeOff, AlertTriangle, UserCheck, Loader2 } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, AlertTriangle, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 
@@ -34,96 +34,40 @@ const getStrengthColor = (strength: number) => {
 export default function RegistrationForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [generatedUsername, setGeneratedUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
-  const [isFormValid, setIsFormValid] = useState(false);
 
-  const { register, isLoading, checkUsernameExists } = useAuth();
+  const { register, isLoading } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     setPasswordStrength(calculatePasswordStrength(password));
   }, [password]);
 
-  // Auto-generate username
-  useEffect(() => {
-    if (firstName.trim() && lastName.trim()) {
-      const baseUsername = `${firstName.trim().toLowerCase()}.${lastName.trim().toLowerCase()}`;
-      setGeneratedUsername(baseUsername);
-    } else {
-      setGeneratedUsername('');
-    }
-  }, [firstName, lastName]);
-
-  // Debounce username check for generated username
-  useEffect(() => {
-    if (!generatedUsername.trim()) {
-      setUsernameAvailable(null);
-      return;
-    }
-    const handler = setTimeout(async () => {
-      setUsernameCheckLoading(true);
-      const exists = await checkUsernameExists(generatedUsername.trim());
-      setUsernameAvailable(!exists);
-      setUsernameCheckLoading(false);
-    }, 700);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [generatedUsername, checkUsernameExists]);
-
-  // Validate form for button disable state
-  useEffect(() => {
-    const allFieldsFilled =
-      firstName.trim() !== '' &&
-      lastName.trim() !== '' &&
-      password !== '' &&
-      confirmPassword !== '';
-    const passwordsMatch = password === confirmPassword;
-    const usernameIsAvailable = usernameAvailable === true;
-    const passwordIsStrongEnough = passwordStrength >= 50;
-
-    setIsFormValid(
-      allFieldsFilled &&
-      passwordsMatch &&
-      usernameIsAvailable &&
-      !usernameCheckLoading &&
-      passwordIsStrongEnough &&
-      !isLoading // Also consider global loading state
-    );
-  }, [
-    firstName,
-    lastName,
-    password,
-    confirmPassword,
-    usernameAvailable,
-    usernameCheckLoading,
-    passwordStrength,
-    isLoading
-  ]);
-
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isFormValid) {
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Las contraseñas no coinciden",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (passwordStrength < 50) {
        toast({
-        title: "Error de Registro",
-        description: "Por favor, completa y corrige todos los campos requeridos.",
+        title: "Contraseña Débil",
+        description: "Por favor, elige una contraseña más segura.",
         variant: "destructive",
       });
       return;
     }
     
-    // Generated username is already in `generatedUsername` state.
-    // Pass firstName, lastName, generatedUsername (as username), and password to register.
-    await register(firstName.trim(), lastName.trim(), generatedUsername.trim(), password);
+    await register(firstName, lastName, email, password);
   };
 
   return (
@@ -162,25 +106,19 @@ export default function RegistrationForm() {
           </div>
           
           <div className="space-y-1">
-            <Label htmlFor="generatedUsernameDisplay">Nombre de Usuario Asignado</Label>
-            <div 
-                id="generatedUsernameDisplay"
-                className="flex items-center p-3 min-h-[2.5rem] rounded-md border border-green-500 bg-green-50 text-green-700"
-            >
-                <UserCheck className="h-5 w-5 mr-2 text-green-600 shrink-0" />
-                {generatedUsername ? (
-                    <span className="font-medium">{generatedUsername}</span>
-                ): (
-                    <span className="text-muted-foreground italic">Se generará aquí...</span>
-                )}
-                {usernameCheckLoading && <Loader2 className="h-4 w-4 ml-auto animate-spin text-green-600" />}
+            <Label htmlFor="email">Correo Electrónico</Label>
+             <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu.correo@ejemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-background pl-10"
+                />
             </div>
-            {generatedUsername.trim() && !usernameCheckLoading && usernameAvailable === true && (
-              <p className="text-xs text-green-600">Nombre de usuario disponible.</p>
-            )}
-            {generatedUsername.trim() && !usernameCheckLoading && usernameAvailable === false && (
-              <p className="text-xs text-destructive">Este nombre de usuario ya existe. Intenta con otro nombre/apellido.</p>
-            )}
           </div>
 
           <div className="space-y-1">
@@ -189,7 +127,7 @@ export default function RegistrationForm() {
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Crea una contraseña"
+                placeholder="Mínimo 6 caracteres"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -244,14 +182,10 @@ export default function RegistrationForm() {
             )}
           </div>
 
-          <p className="text-xs text-muted-foreground p-2 border rounded-md bg-muted/50">
-            <span className="font-semibold">Nota de seguridad:</span> Este es un sistema de demostración. En una aplicación real, las contraseñas se almacenarían de forma segura (hashed). Aquí se almacenan directamente para simplificar, lo cual <span className="text-destructive font-medium">no es seguro para producción</span>.
-          </p>
-
           <Button 
             type="submit" 
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
-            disabled={!isFormValid || isLoading}
+            disabled={isLoading || !firstName || !lastName || !email || !password || password !== confirmPassword}
           >
             <UserPlus className="mr-2 h-5 w-5" />
             {isLoading ? 'Registrando...' : 'Crear Cuenta'}
@@ -267,4 +201,3 @@ export default function RegistrationForm() {
     </Card>
   );
 }
-    

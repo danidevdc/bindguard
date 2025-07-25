@@ -1,5 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth, type Auth, connectAuthEmulator } from 'firebase/auth'; // Import Auth
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,6 +14,7 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let db: Firestore;
+let auth: Auth; // Declare auth variable
 
 // Check if all necessary Firebase config keys are present
 const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
@@ -20,7 +22,7 @@ const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
 
 if (missingKeys.length > 0) {
   console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file or Firebase setup.`);
-  // We don't initialize app or db if config is missing to prevent further errors.
+  // We don't initialize app, db, or auth if config is missing to prevent further errors.
 } else {
   // Initialize Firebase App
   if (!getApps().length) {
@@ -33,27 +35,45 @@ if (missingKeys.length > 0) {
 
   // Get Firestore instance
   db = getFirestore(app);
+  // Get Auth instance
+  auth = getAuth(app);
 
-  // Connect to Firestore Emulator if in development and the flag is set
-  // This check prevents re-connecting on hot reloads
+  // Connect to Emulators if in development and the flag is set
   if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+    // Connect to Firestore Emulator
     if (!(global as any)._firestoreEmulatorConnected) {
-      console.log("Connecting to Firebase Emulator at localhost:8080...");
+      console.log("Connecting to Firebase Firestore Emulator at localhost:8080...");
       try {
         connectFirestoreEmulator(db, 'localhost', 8080);
         (global as any)._firestoreEmulatorConnected = true;
         console.log("Successfully connected to Firestore Emulator.");
       } catch (e: any) {
-        if (e.code === 'failed-precondition') {
-          console.warn("Firestore Emulator connection failed (failed-precondition). This can happen on hot reloads if the connection is attempted after operations have started. The app should still work if already connected.");
+         if (e.code === 'failed-precondition') {
+          console.warn("Firestore Emulator connection may have already been established.");
         } else {
-          console.error("An error occurred while connecting to the Firebase Emulator:", e);
+          console.error("An error occurred while connecting to the Firestore Emulator:", e);
         }
       }
     }
+    
+    // Connect to Auth Emulator
+    if (!(global as any)._authEmulatorConnected) {
+       console.log("Connecting to Firebase Auth Emulator at http://localhost:9099...");
+       try {
+        connectAuthEmulator(auth, "http://localhost:9099");
+        (global as any)._authEmulatorConnected = true;
+        console.log("Successfully connected to Auth Emulator.");
+       } catch (e: any) {
+         if (e.code === 'auth/emulator-config-failed') {
+          console.warn("Auth Emulator connection may have already been established.");
+        } else {
+          console.error("An error occurred while connecting to the Auth Emulator:", e);
+        }
+       }
+    }
   } else {
-    console.log("Connecting to production Cloud Firestore.");
+    console.log("Connecting to production Cloud Firestore and Firebase Auth.");
   }
 }
 
-export { db, app };
+export { db, auth, app };
