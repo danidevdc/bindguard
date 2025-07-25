@@ -1,42 +1,26 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the requesting user is an admin.
-    // It checks the 'isAdmin' field on the user's own document.
-    function isRequestingUserAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // CREATE: An authenticated user can create their own user document.
-      // This is essential for the sign-up process to work.
-      // The `request.auth.uid` must match the `userId` of the document being created.
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
 
-      // READ: An authenticated user can read their own document.
-      // An admin user can read any user's document.
-      allow read: if (request.auth != null && request.auth.uid == userId) || isRequestingUserAdmin();
+      // Admins can read all user profiles
+      function isUserAdmin() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      }
 
-      // UPDATE: An authenticated user can update their own document, but they cannot
-      // change their 'isAdmin' status. This prevents users from promoting themselves.
-      allow update: if request.auth != null && request.auth.uid == userId && !("isAdmin" in request.resource.data);
-      
-      // DELETE: Only admins should be able to delete user documents (not implemented on client for safety).
-      allow delete: if isRequestingUserAdmin();
+      allow list: if request.auth != null && isUserAdmin();
     }
 
-    // Rules for the 'medicines' collection
     match /medicines/{medicineId} {
-      // READ: Any authenticated user can read medicine data.
       allow read: if request.auth != null;
-
-      // WRITE (create, update, delete): Only admins can modify medicine data.
-      allow write: if isRequestingUserAdmin();
+      
+      // Any authenticated user can update a medicine document (for dispensing/stocking)
+      allow update: if request.auth != null;
+      
+      // Only admins can create or delete medicine records entirely
+      allow create, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }
