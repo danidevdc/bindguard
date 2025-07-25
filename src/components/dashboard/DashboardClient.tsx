@@ -6,32 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QrCode, LayoutList, Settings, ScanSearch } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect, useState } from 'react';
 
 export default function DashboardClient() {
-  const { isCurrentUserAdmin, currentUserData } = useAuth(); 
-  const [displayName, setDisplayName] = useState<string | null>(null);
-
-  useEffect(() => {
-      if (currentUserData) {
-        if (currentUserData.firstName && currentUserData.firstName.trim() !== '') {
-            const firstName = currentUserData.firstName;
-            const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-            setDisplayName(capitalizedFirstName);
-        } else {
-            setDisplayName(currentUserData.email || "Usuario");
-        }
-      } else {
-        setDisplayName("Bienvenido");
-      }
-  }, [currentUserData]);
+  const { isCurrentUserAdmin } = useAuth(); 
 
   return (
     <div className="flex flex-col items-center justify-center">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader className="text-center pb-4">
           <CardTitle className="text-2xl font-semibold">
-            {displayName ? `Hola, ${displayName}` : 'Bienvenido'}
+            Bienvenido!
           </CardTitle>
           
         </CardHeader>
@@ -89,3 +73,4 @@ export default function DashboardClient() {
     </div>
   );
 }
+
