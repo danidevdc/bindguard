@@ -26,6 +26,7 @@ export default function InventoryPage() {
         toast({
           title: "Bindcards Actualizados",
           description: "La lista de medicamentos ha sido recargada desde la base de datos.",
+          variant: 'success'
         });
       }
     } catch (error) {

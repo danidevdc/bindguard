@@ -50,7 +50,7 @@ export default function EditMedicinePage() {
         setFoundMedicine(medicine);
         setEditableName(medicine.name);
         setEditablePresentation(medicine.presentation);
-        toast({ title: 'Medicamento Encontrado', description: `Editando: ${medicine.name}` });
+        toast({ title: 'Medicamento Encontrado', description: `Editando: ${medicine.name}`, variant: 'success' });
       } else {
         toast({ title: 'No Encontrado', description: `No se encontró medicamento con ID: ${searchId.trim().toUpperCase()}`, variant: 'destructive' });
       }
@@ -71,7 +71,7 @@ export default function EditMedicinePage() {
     setIsSaving(true);
     try {
       await updateMedicineDetailsInFirestore(foundMedicine.id, editableName.trim(), editablePresentation.trim());
-      toast({ title: 'Cambios Guardados', description: `Medicamento ${editableName.trim()} actualizado.` });
+      toast({ title: 'Cambios Guardados', description: `Medicamento ${editableName.trim()} actualizado.`, variant: 'success' });
       resetFormAndSearch();
     } catch (error) {
       console.error("Error saving changes:", error);

@@ -149,9 +149,9 @@ export function useAuth() {
 
       const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
       if(isAdmin){
-         toast({ title: "Registro de Admin Exitoso", description: `Cuenta de Administrador creada para ${capitalizedFirstName}.` });
+         toast({ title: "Registro de Admin Exitoso", description: `Cuenta de Administrador creada para ${capitalizedFirstName}.`, variant: 'success' });
       } else {
-         toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}.` });
+         toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}.`, variant: 'success' });
       }
       router.push('/login');
 
@@ -220,7 +220,7 @@ export function useAuth() {
     console.warn(`Attempting to delete user record for UID: ${uid} from Firestore. This does not delete the Firebase Auth user.`);
     try {
       await deleteDoc(doc(db, 'users', uid));
-      toast({ title: 'Usuario Eliminado', description: 'El registro del usuario ha sido eliminado de Firestore.' });
+      toast({ title: 'Usuario Eliminado', description: 'El registro del usuario ha sido eliminado de Firestore.', variant: 'success' });
     } catch (error) {
       console.error('Error deleting user from Firestore:', error);
       toast({ title: 'Error al Eliminar', description: 'No se pudo eliminar el registro del usuario.', variant: 'destructive' });

@@ -205,6 +205,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
         toast({
           title: "QR Descargado",
           description: "El código QR ha sido guardado como imagen PNG.",
+          variant: 'success'
         });
       }
     }
@@ -218,6 +219,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
       toast({
         title: "Registro Eliminado",
         description: `El movimiento ha sido eliminado del historial. El stock ha sido recalculado.`,
+        variant: 'success'
       });
       onRefreshNeeded(); // Call the refresh function from parent
     } catch (error) {

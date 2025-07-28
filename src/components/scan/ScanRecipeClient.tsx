@@ -86,7 +86,8 @@ export default function ScanRecipeClient() {
       setStep('results');
       toast({
         title: "Receta Analizada",
-        description: "Los datos han sido extraídos. Por favor, verifica la información."
+        description: "Los datos han sido extraídos. Por favor, verifica la información.",
+        variant: 'success'
       });
     } catch (error: any) {
       console.error("Error processing recipe:", error);

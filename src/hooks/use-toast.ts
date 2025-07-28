@@ -159,7 +159,7 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
-      duration: 2000, // Set default visual duration to 2 seconds
+      duration: props.variant === 'destructive' ? 5000 : 3000, // Longer duration for errors
       onOpenChange: (open) => {
         if (!open) dismiss()
       },

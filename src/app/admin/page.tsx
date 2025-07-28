@@ -31,7 +31,6 @@ export default function AdminPage() {
     toast({
       title: "Próximamente",
       description: `La funcionalidad "${featureName}" estará disponible pronto.`,
-      variant: "default",
     });
   };
 

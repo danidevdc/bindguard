@@ -40,6 +40,7 @@ export default function AdminInventoryPage() {
           toast({
             title: "Bindcards Actualizados",
             description: "La lista de medicamentos ha sido recargada.",
+            variant: 'success'
           });
         }
       } catch (error) {

@@ -47,6 +47,7 @@ export default function ToggleMedicineStatusPage() {
         toast({
           title: "Lista Actualizada",
           description: "La lista de medicamentos ha sido recargada.",
+          variant: 'success'
         });
       }
     } catch (error) {
@@ -83,6 +84,7 @@ export default function ToggleMedicineStatusPage() {
       toast({
         title: 'Estado Actualizado',
         description: `El medicamento ${medicineToConfirm.name} ha sido ${!medicineToConfirm.currentStatus ? 'cerrado' : 'abierto'}.`,
+        variant: 'success'
       });
       loadMedicines(); // Recargar la lista
     } catch (error) {
@@ -177,7 +179,7 @@ export default function ToggleMedicineStatusPage() {
                             <XCircle className="mr-1 h-3.5 w-3.5" /> Cerrado
                           </Badge>
                         ) : (
-                          <Badge variant="default" className="bg-green-600 hover:bg-green-600/90 flex items-center w-fit mx-auto">
+                          <Badge variant="success" className="flex items-center w-fit mx-auto">
                             <CheckCircle className="mr-1 h-3.5 w-3.5" /> Abierto
                           </Badge>
                         )}
@@ -185,9 +187,8 @@ export default function ToggleMedicineStatusPage() {
                       <TableCell className="text-right">
                         <AlertDialogTrigger asChild>
                           <Button
-                            variant={med.isBlocked ? "default" : "destructive"}
+                            variant={med.isBlocked ? "success" : "destructive"}
                             size="sm"
-                            className={med.isBlocked ? "bg-green-600 hover:bg-green-600/90" : ""}
                             onClick={() => setMedicineToConfirm({ id: med.id, name: med.name, currentStatus: med.isBlocked })}
                             disabled={togglingMedicineId === med.id}
                             title={med.isBlocked ? `Abrir ${med.name}` : `Cerrar ${med.name}`}

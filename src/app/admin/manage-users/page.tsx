@@ -55,6 +55,7 @@ export default function ManageUsersPage() {
             toast({
                 title: 'Usuarios Actualizados',
                 description: 'La lista de usuarios ha sido recargada.',
+                variant: 'success'
             });
         }
       } catch (error) {

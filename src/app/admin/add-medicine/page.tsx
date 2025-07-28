@@ -127,6 +127,7 @@ export default function AddMedicinePage() {
         toast({
           title: 'JSON Cargado',
           description: 'Formulario rellenado con los datos del archivo JSON.',
+          variant: 'success'
         });
       } catch (error) {
         console.error('Error parsing JSON:', error);
@@ -243,6 +244,7 @@ export default function AddMedicinePage() {
           currentStock: stockNum,
           lastUpdated: serverTimestamp() as Timestamp,
           dispensingHistory: newDispensingHistory,
+          isBlocked: false,
         };
 
         await createCompleteMedicineInFirestore(newMedicine);
@@ -250,6 +252,7 @@ export default function AddMedicinePage() {
         toast({
           title: 'Medicamento Registrado',
           description: `${newMedicine.name} (ID: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
+          variant: 'success'
         });
 
         setMedicineId('');

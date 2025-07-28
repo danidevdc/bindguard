@@ -165,7 +165,7 @@ export default function StockEntryForm() {
             setTransactionDate(clientNow || new Date()); // Reset transaction date for new entry
             setExpirationDate(undefined);
             setQuantity('');
-            toast({ title: 'Medicamento Encontrado', description: `Ingresando stock para: ${medicine.name}` });
+            toast({ title: 'Medicamento Encontrado', description: `Ingresando stock para: ${medicine.name}`, variant: 'success' });
         }
       } else {
         toast({ title: 'No Encontrado', description: `No se encontró medicamento con ID: ${currentSearchId.toUpperCase()}`, variant: 'destructive' });
@@ -211,6 +211,7 @@ export default function StockEntryForm() {
       toast({
         title: "Stock Añadido Exitosamente",
         description: `${foundMedicine.name}, Cant: ${quantityNum}, Exp: ${format(expirationDate, "dd/MM/yy", { locale: es })}.`,
+        variant: 'success'
       });
       resetFormAndSearch();
     } catch (error: any) {
