@@ -148,7 +148,7 @@ export default function StockEntryForm() {
   const handleSearchMedicine = async (idToSearch?: string) => {
     const currentSearchId = idToSearch || searchId.trim();
     if (!currentSearchId) {
-      toast({ title: 'ID Requerido', description: 'Por favor, ingresa un ID para buscar.', variant: 'destructive' });
+      toast({ title: 'Código Requerido', description: 'Por favor, ingresa un Código para buscar.', variant: 'destructive' });
       return;
     }
     setIsLoadingSearch(true);
@@ -157,7 +157,7 @@ export default function StockEntryForm() {
       const medicine = await getMedicineByIdFromFirestore(currentSearchId.toUpperCase());
       if (medicine) {
         if (medicine.isBlocked) {
-            toast({ title: 'Medicamento Cerrado', description: `El medicamento "${medicine.name}" (ID: ${medicine.id}) está cerrado y no se puede ingresar stock.`, variant: 'destructive' });
+            toast({ title: 'Medicamento Cerrado', description: `El medicamento "${medicine.name}" (Código: ${medicine.id}) está cerrado y no se puede ingresar stock.`, variant: 'destructive' });
             setFoundMedicine(null); // Don't proceed
         } else {
             setFoundMedicine(medicine);
@@ -168,7 +168,7 @@ export default function StockEntryForm() {
             toast({ title: 'Medicamento Encontrado', description: `Ingresando stock para: ${medicine.name}`, variant: 'success' });
         }
       } else {
-        toast({ title: 'No Encontrado', description: `No se encontró medicamento con ID: ${currentSearchId.toUpperCase()}`, variant: 'destructive' });
+        toast({ title: 'No Encontrado', description: `No se encontró medicamento con Código: ${currentSearchId.toUpperCase()}`, variant: 'destructive' });
       }
     } catch (error) {
       console.error("Error searching medicine:", error);
@@ -254,15 +254,15 @@ export default function StockEntryForm() {
         </CardTitle>
         <CardDescription className="text-center">
           {step === "searchMedicine" 
-            ? "Busca el medicamento por su ID para añadir un nuevo lote."
-            : `Ingresando lote para: ${foundMedicine?.name} (ID: ${foundMedicine?.id})`}
+            ? "Busca el medicamento por su Código para añadir un nuevo lote."
+            : `Ingresando lote para: ${foundMedicine?.name} (Código: ${foundMedicine?.id})`}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {step === "searchMedicine" && (
           <form onSubmit={(e) => { e.preventDefault(); handleSearchMedicine(); }} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="searchIdStock">ID del Medicamento</Label>
+              <Label htmlFor="searchIdStock">Código del Medicamento</Label>
               <div className="flex gap-2">
                 <Input
                   id="searchIdStock"
@@ -274,7 +274,7 @@ export default function StockEntryForm() {
                   className="bg-background flex-grow"
                   disabled={isScanningQR}
                 />
-                <Button type="button" variant="outline" onClick={handleScanButtonClick} className="px-3" title={isScanningQR ? "Cerrar Cámara" : "Escanear QR para ID"}>
+                <Button type="button" variant="outline" onClick={handleScanButtonClick} className="px-3" title={isScanningQR ? "Cerrar Cámara" : "Escanear QR para Código"}>
                     <Camera className="h-5 w-5" />
                 </Button>
               </div>
@@ -304,7 +304,7 @@ export default function StockEntryForm() {
             <div className="p-3 bg-accent/10 border border-accent/30 rounded-md">
                 <p className="text-sm font-medium text-accent">Medicamento: {foundMedicine.name}</p>
                 <p className="text-xs text-accent/80">Presentación: {foundMedicine.presentation}</p>
-                <p className="text-xs text-accent/80">ID: {foundMedicine.id}</p>
+                <p className="text-xs text-accent/80">Código: {foundMedicine.id}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="transactionDateStock">Fecha de Transacción</Label>
@@ -366,14 +366,14 @@ export default function StockEntryForm() {
                 <DialogHeader>
                     <DialogTitle className="flex items-center text-blue-600 text-xl">
                         <ScanLine className="mr-2 h-6 w-6" />
-                        Verificar ID Escaneado
+                        Verificar Código Escaneado
                     </DialogTitle>
                     <DialogDescription className="pt-1">
-                        Se ha detectado el siguiente ID de medicamento. ¿Deseas buscarlo?
+                        Se ha detectado el siguiente Código de medicamento. ¿Deseas buscarlo?
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-6">
-                    <Label htmlFor="scannedIdDisplay" className="text-sm font-medium text-muted-foreground">ID Escaneado:</Label>
+                    <Label htmlFor="scannedIdDisplay" className="text-sm font-medium text-muted-foreground">Código Escaneado:</Label>
                     <div id="scannedIdDisplay" className="mt-1 text-2xl font-bold text-blue-600 bg-blue-600/10 p-4 rounded-md text-center tracking-wider">
                         {scannedSearchId}
                     </div>
@@ -393,7 +393,7 @@ export default function StockEntryForm() {
                         disabled={!scannedSearchId.trim() || isLoadingSearch}
                     >
                         {isLoadingSearch ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Search className="mr-2 h-5 w-5" />}
-                        Sí, Buscar este ID
+                        Sí, Buscar este Código
                     </Button>
                 </DialogFooter>
             </DialogContent>

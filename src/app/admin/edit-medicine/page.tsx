@@ -39,7 +39,7 @@ export default function EditMedicinePage() {
   const handleSearchMedicine = async (event?: FormEvent) => {
     if (event) event.preventDefault();
     if (!searchId.trim()) {
-      toast({ title: 'ID Requerido', description: 'Por favor, ingresa un ID para buscar.', variant: 'destructive' });
+      toast({ title: 'Código Requerido', description: 'Por favor, ingresa un Código para buscar.', variant: 'destructive' });
       return;
     }
     setIsLoadingData(true);
@@ -52,7 +52,7 @@ export default function EditMedicinePage() {
         setEditablePresentation(medicine.presentation);
         toast({ title: 'Medicamento Encontrado', description: `Editando: ${medicine.name}`, variant: 'success' });
       } else {
-        toast({ title: 'No Encontrado', description: `No se encontró medicamento con ID: ${searchId.trim().toUpperCase()}`, variant: 'destructive' });
+        toast({ title: 'No Encontrado', description: `No se encontró medicamento con Código: ${searchId.trim().toUpperCase()}`, variant: 'destructive' });
       }
     } catch (error) {
       console.error("Error searching medicine:", error);
@@ -118,14 +118,14 @@ export default function EditMedicinePage() {
               Editar Medicamento
             </CardTitle>
             <CardDescription>
-              Busca un medicamento por su ID para editar su nombre y presentación.
+              Busca un medicamento por su Código para editar su nombre y presentación.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             {!foundMedicine ? (
               <form onSubmit={handleSearchMedicine} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="searchId">ID del Medicamento a Editar</Label>
+                  <Label htmlFor="searchId">Código del Medicamento a Editar</Label>
                   <Input
                     id="searchId"
                     type="text"
@@ -144,7 +144,7 @@ export default function EditMedicinePage() {
             ) : (
               <form onSubmit={handleSaveChanges} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="medicineIdDisplay">ID del Medicamento (No editable)</Label>
+                  <Label htmlFor="medicineIdDisplay">Código del Medicamento (No editable)</Label>
                   <Input
                     id="medicineIdDisplay"
                     type="text"

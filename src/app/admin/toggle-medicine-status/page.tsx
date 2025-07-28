@@ -144,7 +144,7 @@ export default function ToggleMedicineStatusPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Buscar por ID o nombre..."
+                placeholder="Buscar por Código o nombre..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 shadow-sm"
@@ -162,7 +162,7 @@ export default function ToggleMedicineStatusPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead className="text-center">Estado Actual</TableHead>
                     <TableHead className="text-right">Acción</TableHead>
@@ -221,7 +221,7 @@ export default function ToggleMedicineStatusPage() {
                 <AlertDialogTitle>Confirmar Cambio de Estado</AlertDialogTitle>
                 <AlertDialogDescription>
                     ¿Estás seguro de que quieres {medicineToConfirm.currentStatus ? 'ABRIR' : 'CERRAR'} el medicamento 
-                    <span className="font-semibold"> {medicineToConfirm.name} (ID: {medicineToConfirm.id})</span>?
+                    <span className="font-semibold"> {medicineToConfirm.name} (Código: {medicineToConfirm.id})</span>?
                     <br/>
                     {medicineToConfirm.currentStatus 
                         ? "Al abrirlo, estará disponible para nuevas transacciones."

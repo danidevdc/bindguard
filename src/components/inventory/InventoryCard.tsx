@@ -112,7 +112,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
     const dataForExcel = [
       ["Nombre Medicamento:", medicine.name],
       ["Presentación:", medicine.presentation],
-      ["ID:", medicine.id],
+      ["Código:", medicine.id],
       ["Stock Actual:", medicine.currentStock],
       ["Estado:", medicine.isBlocked ? "CERRADO" : "ABIERTO"],
       [],
@@ -251,7 +251,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                   variant={"secondary"}
                   className="whitespace-nowrap text-xs px-2 py-0.5 inline-block"
                 >
-                  ID: {medicine.id}
+                  Código: {medicine.id}
                 </Badge>
                 {medicine.isBlocked && (
                   <Badge variant="destructive" className="flex items-center text-xs px-2 py-0.5">

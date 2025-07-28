@@ -258,7 +258,7 @@ export default function AddMedicinePage() {
     if (!currentId || !currentName || !currentPresentation) {
       toast({
         title: 'Campos Incompletos',
-        description: 'ID, Nombre y Presentación son requeridos.',
+        description: 'Código, Nombre y Presentación son requeridos.',
         variant: 'destructive',
       });
       return;
@@ -313,8 +313,8 @@ export default function AddMedicinePage() {
         const existingMedicine = await getMedicineByIdFromFirestore(currentId);
         if (existingMedicine) {
           toast({
-            title: 'ID Duplicado',
-            description: `Ya existe un medicamento con el ID: ${currentId}.`,
+            title: 'Código Duplicado',
+            description: `Ya existe un medicamento con el Código: ${currentId}.`,
             variant: 'destructive',
           });
           return;
@@ -348,7 +348,7 @@ export default function AddMedicinePage() {
 
         toast({
           title: 'Medicamento Registrado',
-          description: `${newMedicine.name} (ID: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
+          description: `${newMedicine.name} (Código: ${newMedicine.id}) ha sido añadido con stock inicial ${newMedicine.currentStock}.`,
           variant: 'success'
         });
 
@@ -401,7 +401,7 @@ export default function AddMedicinePage() {
                 Añadir Medicamento
               </CardTitle>
               <CardDescription>
-                Ingresa los detalles del medicamento o usa una de las herramientas automáticas. El ID debe ser único.
+                Ingresa los detalles del medicamento o usa una de las herramientas automáticas. El Código debe ser único.
               </CardDescription>
               {formattedClientNow && (
                    <Alert variant="default" className="mt-4 text-sm bg-accent/10 border-accent/30">
@@ -443,13 +443,13 @@ export default function AddMedicinePage() {
                   />
                 </div>
                  <p className="text-xs text-muted-foreground">
-                  El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD). El ID debe ser único.
+                  El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD). El Código debe ser único.
                 </p>
               </div>
               <Separator className="my-6" />
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="medicineId">ID del Medicamento (Único)</Label>
+                  <Label htmlFor="medicineId">Código del Medicamento (Único)</Label>
                   <Input
                     id="medicineId"
                     type="text"
@@ -579,7 +579,7 @@ export default function AddMedicinePage() {
                     <DialogDescription>Confirma si la información es correcta.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 my-4">
-                    <div><Label>ID:</Label><Input value={extractedData.id || ''} readOnly /></div>
+                    <div><Label>Código:</Label><Input value={extractedData.id || ''} readOnly /></div>
                     <div><Label>Nombre:</Label><Input value={extractedData.name || ''} readOnly /></div>
                     <div><Label>Presentación:</Label><Input value={extractedData.presentation || ''} readOnly /></div>
                 </div>

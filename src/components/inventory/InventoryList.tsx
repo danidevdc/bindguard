@@ -40,7 +40,7 @@ export default function InventoryList({ medicines, isAdminView = false, onRefres
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Buscar medicamentos por nombre, ID o descripción..."
+          placeholder="Buscar medicamentos por nombre, código o descripción..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full max-w-lg mx-auto pl-10 pr-4 py-2 shadow-sm"
