@@ -200,7 +200,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
         title: "Registro Eliminado",
         description: `El movimiento ha sido eliminado del historial. El stock ha sido recalculado.`,
       });
-      onRefreshNeeded(); // Call the refresh function passed from parent
+      onRefreshNeeded(); // Call the refresh function from parent
     } catch (error) {
       console.error("Error deleting record:", error);
       toast({
@@ -346,11 +346,11 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                         <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-primary/30 dark:border-green-700/50 text-center justify-center">
                           <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
                                   isCurrentlyExpired ? "text-red-500 dark:text-red-400" :
-                                  isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-muted-foreground"
+                                  isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-green-600 dark:text-green-400"
                               )}>
                               {isCurrentlyExpired && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
                               {isExpiringSoon && !isCurrentlyExpired && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                              {inferredRecordExpDateJs && !isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0 text-green-600 dark:text-green-400" title="Vigente"/>}
+                              {!isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Vigente"/>}
                               {inferredRecordExpDateJs ? format(inferredRecordExpDateJs, 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
                             </div>
                         </td>

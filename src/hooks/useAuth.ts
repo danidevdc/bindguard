@@ -229,7 +229,11 @@ export function useAuth() {
   };
   
   const getCurrentUserUsername = (): string | null => {
-    // Legacy support, now returns email or null. Username concept is removed.
+    if (currentUserData) {
+      // Return username in "firstName.lastName" format, lowercase.
+      return `${currentUserData.firstName.toLowerCase()}.${currentUserData.lastName.toLowerCase()}`;
+    }
+    // Fallback to email if user data is not yet loaded, though less ideal.
     return firebaseUser?.email || null;
   };
   
