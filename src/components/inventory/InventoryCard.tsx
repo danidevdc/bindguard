@@ -324,6 +324,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                 <tbody className="[&_tr:last-child]:border-b-0">
                   {displayHistory.map((record) => {
                     const recordDateJs = (record.date as Timestamp).toDate();
+                    const isDuplicateRx = duplicateRxNumbers.has(record.rxNumber);
 
                     let inferredRecordExpDateJs = record.expirationDate ? (record.expirationDate as Timestamp).toDate() : undefined;
                     if (record.type === 'dispensed' && !inferredRecordExpDateJs && clientNow) {
@@ -350,14 +351,12 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                         key={record.id}
                         className={cn(
                           "border-b border-primary/30 dark:border-green-700/50",
-                          isCurrentlyExpired ? 'bg-red-100 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-green-700/15'
+                          isCurrentlyExpired ? 'bg-red-200/60 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-green-700/15',
+                          isDuplicateRx && 'bg-red-200/50 dark:bg-red-900/40'
                         )}
                       >
                         <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
-                        <td className={cn(
-                            "min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50",
-                             duplicateRxNumbers.has(record.rxNumber) && "bg-red-200/50 dark:bg-red-900/40"
-                        )}>
+                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">
                             {record.rxNumber}
                         </td>
                         <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-700 dark:text-green-400 font-medium whitespace-nowrap text-xs border-r border-primary/30 dark:border-green-700/50">
@@ -369,8 +368,8 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                         <td className="min-w-[60px] text-center font-semibold px-0 py-2 align-middle whitespace-nowrap text-xs border-r border-primary/30 dark:border-green-700/50">{record.balance}</td>
                         <td className="min-w-[85px] px-0 py-2 align-middle whitespace-nowrap border-r border-primary/30 dark:border-green-700/50 text-center justify-center">
                           <div className={cn("flex items-center justify-center gap-1 text-xs whitespace-nowrap",
-                                  isCurrentlyExpired ? "text-red-500 dark:text-red-400" :
-                                  isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-green-600 dark:text-green-400"
+                                  isCurrentlyExpired ? "text-red-600 dark:text-red-500" :
+                                  isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-green-700 dark:text-green-400"
                               )}>
                               {isCurrentlyExpired && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
                               {isExpiringSoon && !isCurrentlyExpired && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
@@ -487,3 +486,4 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
     </>
   );
 }
+
