@@ -345,14 +345,14 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
 
                     const isCurrentlyExpired = clientNow && inferredRecordExpDateJs && isExpiredClient(inferredRecordExpDateJs, clientNow);
                     const isExpiringSoon = clientNow && inferredRecordExpDateJs && isExpiringSoonClient(inferredRecordExpDateJs, clientNow, 90);
+                    const hasWarning = isCurrentlyExpired || isDuplicateRx;
 
                     return (
                       <tr
                         key={record.id}
                         className={cn(
                           "border-b border-primary/30 dark:border-green-700/50",
-                          isCurrentlyExpired ? 'bg-red-200/60 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-green-700/15',
-                          isDuplicateRx && 'bg-red-200/50 dark:bg-red-900/40'
+                           hasWarning ? 'bg-red-200/60 dark:bg-red-900/50' : 'hover:bg-primary/10 dark:hover:bg-green-700/15'
                         )}
                       >
                         <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
@@ -486,4 +486,3 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
     </>
   );
 }
-
