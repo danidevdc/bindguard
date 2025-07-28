@@ -67,8 +67,8 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const { getCurrentUserUsername } = useAuth();
 
   const [isScanningQR, setIsScanningQR] = useState(false);
-  const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => { setVideoNode(node); }, []);
   const [videoNode, setVideoNode] = useState<HTMLVideoElement | null>(null);
+  const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => { setVideoNode(node); }, []);
 
   const qrScannerRef = useRef<QrScanner | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -77,10 +77,54 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationResult, setVerificationResult] = useState<VerificationResult>({ status: 'idle' });
   const [verificationCode, setVerificationCode] = useState('');
+  
+  const LOCAL_STORAGE_KEY = 'inProgressPrescription';
+
+
+  // Restore state from localStorage on initial mount
+  useEffect(() => {
+    try {
+        const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedStateJSON) {
+            const savedState = JSON.parse(savedStateJSON);
+            if (savedState.prescriptionNumber && savedState.medicinesInPrescription) {
+                setPrescriptionNumber(savedState.prescriptionNumber);
+                setMedicinesInPrescription(savedState.medicinesInPrescription);
+                // Use a default date if not saved, or restore it if you save it too
+                const restoredDate = savedState.recipeDate ? new Date(savedState.recipeDate) : new Date();
+                setRecipeDate(restoredDate);
+                setStep("identifyMedicine"); // Jump to the appropriate step
+                toast({ title: "Progreso Restaurado", description: "Se ha restaurado una receta que estaba en progreso." });
+            }
+        }
+    } catch (error) {
+        console.error("Failed to parse state from localStorage", error);
+        localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear corrupted data
+    }
+  }, [toast]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    // Only save if there's a prescription number to avoid saving an empty initial state
+    if (prescriptionNumber) {
+        const stateToSave = {
+            prescriptionNumber,
+            medicinesInPrescription,
+            recipeDate: recipeDate?.toISOString(), // Save date as ISO string
+        };
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        } catch (error) {
+            console.error("Failed to save state to localStorage", error);
+        }
+    }
+  }, [prescriptionNumber, medicinesInPrescription, recipeDate]);
+
 
   useEffect(() => {
     const today = new Date();
     setClientNow(today);
+    // Set default recipe date only if it's not already set (e.g., from restored state)
     if (!recipeDate && step === "identifyMedicine") {
       setRecipeDate(today);
     }
@@ -338,6 +382,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     } else { 
         toast({ title: "Receta Cancelada", description: `Receta Nº ${prescriptionNumber} cancelada.` });
     }
+    localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear the saved state
     router.push('/dashboard');
   };
 
@@ -488,7 +533,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
                         </Alert>
                     )}
                     {verificationResult.status === 'success' && verificationResult.medicine && (
-                        <div className="text-center p-4 rounded-md bg-green-50 dark:bg-green-900/20">
+                       <div className="text-center p-4 rounded-md bg-green-50 dark:bg-green-900/20">
                             <p className="text-lg font-bold text-green-700 dark:text-green-300">{verificationResult.medicine.id}</p>
                             <p className="text-lg text-green-800 dark:text-green-200">{verificationResult.medicine.name}</p>
                             <p className="text-sm text-muted-foreground mt-2">Stock Actual: {verificationResult.medicine.currentStock}</p>
@@ -598,3 +643,5 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
+
+    
