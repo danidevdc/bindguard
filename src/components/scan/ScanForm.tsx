@@ -137,7 +137,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
   }, [step, recipeDate]);
 
-  const playBeep = () => {
+  const playBeep = useCallback(() => {
     if (!audioContextRef.current) return;
     const oscillator = audioContextRef.current.createOscillator();
     const gainNode = audioContextRef.current.createGain();
@@ -148,7 +148,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime); 
     oscillator.start();
     oscillator.stop(audioContextRef.current.currentTime + 0.1); 
-  };
+  }, []);
   
  const handleQrScanSuccess = useCallback((result: QrScanner.ScanResult | string) => {
     const scannedData = typeof result === 'string' ? result : result.data;
@@ -177,7 +177,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
             variant: "destructive",
         });
     }
-  }, []); 
+  }, [playBeep, toast]); 
 
   const handleQrScanError = useCallback((error: Error | string) => {
     if (typeof error === 'object' && error !== null && 'message' in error) {
@@ -234,16 +234,16 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
   }));
 
-  const handleStartPrescription = (event: FormEvent) => {
+  const handleStartPrescription = useCallback((event: FormEvent) => {
     event.preventDefault();
     if (!prescriptionNumber.trim()) {
       toast({ title: "Número de Receta Requerido", variant: "destructive" });
       return;
     }
     setStep("identifyMedicine");
-  };
+  }, [prescriptionNumber, toast]);
 
-  const triggerVerification = async (codeToVerifyRaw: string) => {
+  const triggerVerification = useCallback(async (codeToVerifyRaw: string) => {
     const codeToVerify = codeToVerifyRaw.trim().toUpperCase();
     if (!codeToVerify) {
         toast({ title: "Código Requerido", description: "Ingresa un código para verificar.", variant: "destructive" });
@@ -282,21 +282,21 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     } catch (error) {
         setVerificationResult({ status: 'error', message: "Error al conectar con la base de datos." });
     }
-  };
+  }, [recipeDate, medicinesInPrescription, toast]);
 
-  const handleVerificationDialogContinue = () => {
+  const handleVerificationDialogContinue = useCallback(() => {
     if (verificationResult.status === 'success' && verificationResult.medicine) {
         setIdentifiedMedicine(verificationResult.medicine);
         setStep("enterQuantity");
         setShowVerificationDialog(false);
     }
-  };
+  }, [verificationResult]);
   
-  const handleManualCodeSubmit = () => {
+  const handleManualCodeSubmit = useCallback(() => {
     triggerVerification(manualCodeInputValue);
-  };
+  }, [manualCodeInputValue, triggerVerification]);
 
-  const addCurrentMedicineToList = (): boolean => {
+  const addCurrentMedicineToList = useCallback((): boolean => {
     if (!currentQuantity.trim() || !identifiedMedicine) {
       toast({ title: "Datos incompletos", variant: "destructive" });
       return false;
@@ -322,18 +322,18 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
     toast({ title: "Medicamento Añadido", description: `${identifiedMedicine.name}, Cant: ${quantityNum}.` });
     return true;
-  };
+  }, [currentQuantity, identifiedMedicine, toast]);
 
-  const handleAddMedicineAndContinueScanning = () => {
+  const handleAddMedicineAndContinueScanning = useCallback(() => {
     if (addCurrentMedicineToList()) {
       setManualCodeInputValue('');
       setIdentifiedMedicine(null);
       setCurrentQuantity('');
       setStep("identifyMedicine");
     }
-  };
+  }, [addCurrentMedicineToList]);
 
-  const handleGoToReviewFromQuantity = () => {
+  const handleGoToReviewFromQuantity = useCallback(() => {
     let itemAddedSuccessfully = false;
     if (identifiedMedicine && currentQuantity.trim()) {
         itemAddedSuccessfully = addCurrentMedicineToList();
@@ -347,22 +347,22 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     setIdentifiedMedicine(null);
     setCurrentQuantity('');
     setStep("reviewPrescription");
-  };
+  }, [identifiedMedicine, currentQuantity, addCurrentMedicineToList, medicinesInPrescription, toast]);
 
-  const handleGoToReviewFromIdentify = () => {
+  const handleGoToReviewFromIdentify = useCallback(() => {
     if (medicinesInPrescription.length > 0) {
       setStep("reviewPrescription");
     } else {
       toast({ title: "Receta Vacía", description: "Añade al menos un medicamento para poder revisar la receta.", variant: "destructive" });
     }
-  };
+  }, [medicinesInPrescription, toast]);
 
-  const handleRemoveMedicineFromReview = (medicineEntryId: string) => {
+  const handleRemoveMedicineFromReview = useCallback((medicineEntryId: string) => {
     setMedicinesInPrescription(prevMeds => prevMeds.filter(med => med.id !== medicineEntryId));
     toast({ title: "Medicamento Eliminado" });
-  };
+  }, [toast]);
 
-  const finalizeAndRedirect = async (action: "confirmed" | "cancelled") => {
+  const finalizeAndRedirect = useCallback(async (action: "confirmed" | "cancelled") => {
     const currentUsername = getCurrentUserUsername(); 
     if (action === "confirmed") {
         if (medicinesInPrescription.some(med => med.quantity <= 0)) {
@@ -384,12 +384,12 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
     localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear the saved state
     router.push('/dashboard');
-  };
+  }, [getCurrentUserUsername, medicinesInPrescription, recipeDate, prescriptionNumber, router, toast]);
 
-  const handleDateSelect = (date: Date | undefined) => {
+  const handleDateSelect = useCallback((date: Date | undefined) => {
     setRecipeDate(date);
     setIsCalendarOpen(false);
-  }
+  }, []);
 
   if (step === "enterPrescriptionNumber") {
     return (
@@ -643,5 +643,3 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
 ScanForm.displayName = 'ScanForm';
 export default ScanForm;
-
-    
