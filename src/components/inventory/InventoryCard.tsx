@@ -9,7 +9,7 @@ import { Package, CalendarDays, UserCircle, AlertTriangle, TrendingUp, TrendingD
 import { format, compareAsc } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -50,6 +50,25 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
   useEffect(() => {
     setClientNow(new Date());
   }, []);
+  
+  const duplicateRxNumbers = useMemo(() => {
+    const rxNumberCounts = new Map<string, number>();
+    medicine.dispensingHistory.forEach(record => {
+      // Exclude initial stock or lot entries from duplicate checks
+      if (record.rxNumber && !record.rxNumber.startsWith('STOCK-') && !record.rxNumber.startsWith('LOTE-')) {
+          rxNumberCounts.set(record.rxNumber, (rxNumberCounts.get(record.rxNumber) || 0) + 1);
+      }
+    });
+    
+    const duplicates = new Set<string>();
+    for (const [rxNumber, count] of rxNumberCounts.entries()) {
+        if (count > 1) {
+            duplicates.add(rxNumber);
+        }
+    }
+    return duplicates;
+  }, [medicine.dispensingHistory]);
+
 
   const sortedHistoryForBalance = [...medicine.dispensingHistory].sort((a, b) => {
     const dateA = (a.date as Timestamp).toDate();
@@ -324,7 +343,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                     }
 
                     const isCurrentlyExpired = clientNow && inferredRecordExpDateJs && isExpiredClient(inferredRecordExpDateJs, clientNow);
-                    const isExpiringSoon = clientNow && inferredRecordExpDateJs && isExpiringSoonClient(inferredRecordExpDateJs, clientNow);
+                    const isExpiringSoon = clientNow && inferredRecordExpDateJs && isExpiringSoonClient(inferredRecordExpDateJs, clientNow, 90);
 
                     return (
                       <tr
@@ -335,7 +354,12 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                         )}
                       >
                         <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">{format(recordDateJs, 'dd/MM/yy', { locale: es })}</td>
-                        <td className="min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50">{record.rxNumber}</td>
+                        <td className={cn(
+                            "min-w-[70px] px-0 py-2 align-middle whitespace-nowrap text-xs text-center border-r border-primary/30 dark:border-green-700/50",
+                             duplicateRxNumbers.has(record.rxNumber) && "bg-red-200/50 dark:bg-red-900/40"
+                        )}>
+                            {record.rxNumber}
+                        </td>
                         <td className="min-w-[60px] text-center px-0 py-2 align-middle text-green-700 dark:text-green-400 font-medium whitespace-nowrap text-xs border-r border-primary/30 dark:border-green-700/50">
                           {record.type === 'stocked' ? <><TrendingUp className="h-3.5 w-3.5 inline mr-0.5"/>{record.quantity}</> : '-'}
                         </td>
