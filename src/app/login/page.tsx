@@ -1,6 +1,6 @@
 
 import LoginForm from '@/components/auth/LoginForm';
-import { Pill } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -8,7 +8,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Pill className="h-16 w-16 mx-auto text-primary mb-4" />
+          <Image
+            src="/icon.png"
+            alt="BindGuard Logo"
+            width={64}
+            height={64}
+            className="mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-foreground">BindGuard</h1>
           <p className="text-muted-foreground">Acceso seguro a tu sistema de inventario.</p>
         </div>

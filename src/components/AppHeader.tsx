@@ -2,10 +2,11 @@
 "use client";
 
 import Link from 'next/link';
-import { Pill, LogOut, Home as HomeIcon } from 'lucide-react'; 
+import { LogOut, Home as HomeIcon } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation'; // Import useRouter
+import Image from 'next/image';
 
 export default function AppHeader() {
   const { logout } = useAuth();
@@ -26,7 +27,7 @@ export default function AppHeader() {
     <header className="bg-card shadow-md">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <button onClick={handleNavigateHome} className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
-          <Pill className="h-7 w-7" />
+          <Image src="/icon.png" alt="BindGuard Logo" width={28} height={28} />
           <h1 className="text-xl font-semibold">BindGuard</h1>
         </button>
         <div className="flex items-center space-x-2"> 
