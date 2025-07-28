@@ -11,8 +11,8 @@ export default function LoginPage() {
           <Image
             src="/icon.png"
             alt="BindGuard Logo"
-            width={64}
-            height={64}
+            width={80}
+            height={80}
             className="mx-auto mb-4"
           />
           <h1 className="text-3xl font-bold text-foreground">BindGuard</h1>
