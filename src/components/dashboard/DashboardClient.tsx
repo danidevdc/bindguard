@@ -20,19 +20,6 @@ export default function DashboardClient() {
           
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-          {isCurrentUserAdmin && (
-            <Link href="/scan-recipe" passHref legacyBehavior>
-              <Button
-                variant="default"
-                className="w-full h-40 text-xl bg-purple-600 hover:bg-purple-600/90 text-white flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
-                aria-label="Escanear Receta"
-              >
-                <ScanSearch className="h-16 w-16 mb-3" />
-                Escanear
-                Receta
-              </Button>
-            </Link>
-          )}
           <Link href="/scan" passHref legacyBehavior>
             <Button
               variant="default"
@@ -54,6 +41,19 @@ export default function DashboardClient() {
               Bindcards
             </Button>
           </Link>
+          {isCurrentUserAdmin && (
+            <Link href="/scan-recipe" passHref legacyBehavior>
+              <Button
+                variant="default"
+                className="w-full h-40 text-xl bg-purple-600 hover:bg-purple-600/90 text-white flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
+                aria-label="Escanear Receta"
+              >
+                <ScanSearch className="h-16 w-16 mb-3" />
+                Escanear
+                Receta
+              </Button>
+            </Link>
+          )}
         </CardContent>
         {isCurrentUserAdmin && (
           <CardContent className="p-6 pt-0">
@@ -73,4 +73,3 @@ export default function DashboardClient() {
     </div>
   );
 }
-
