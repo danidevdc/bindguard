@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type FormEvent, useEffect, type ChangeEvent, useRef } from 'react';
+import { useState, type FormEvent, useEffect, type ChangeEvent, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthWrapper from '@/components/AuthWrapper';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud, CalendarIcon as CalendarIconLucide, Info } from 'lucide-react';
+import { ArrowLeft, PillBottle, Save, ShieldAlert, UploadCloud, CalendarIcon as CalendarIconLucide, Info, Camera, RefreshCw, Loader2, ScanSearch, Check } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { type Medicine, type DispensingRecord, getMedicineByIdFromFirestore, createCompleteMedicineInFirestore } from '@/lib/medicineService';
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
@@ -20,6 +20,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import Image from 'next/image';
+import { extractLabel, type ExtractLabelOutput } from '@/ai/flows/extract-label-flow';
 
 
 interface MedicineJsonFormat {
@@ -29,6 +32,9 @@ interface MedicineJsonFormat {
   initialStock?: number | string;
   expirationDate?: string; // Expects YYYY-MM-DD
 }
+
+type AiScanStep = 'idle' | 'camera' | 'preview' | 'loading' | 'results' | 'error';
+
 
 export default function AddMedicinePage() {
   const { isCurrentUserAdmin, isLoading: authLoading, getCurrentUserUsername } = useAuth();
@@ -45,6 +51,14 @@ export default function AddMedicinePage() {
   const [manualExpirationDate, setManualExpirationDate] = useState<Date | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State for AI Scan
+  const [aiScanStep, setAiScanStep] = useState<AiScanStep>('idle');
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractLabelOutput | null>(null);
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   useEffect(() => {
     const now = new Date();
     setClientNow(now);
@@ -59,6 +73,89 @@ export default function AddMedicinePage() {
       router.replace('/dashboard');
     }
   }, [isCurrentUserAdmin, authLoading, router, toast]);
+
+  const startCamera = useCallback(async () => {
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setAiErrorMessage("No se pudo acceder a la cámara. Revisa los permisos.");
+      setAiScanStep('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (aiScanStep === 'camera') {
+      startCamera();
+    }
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [aiScanStep, startCamera]);
+
+
+  const handleTakePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      setImageSrc(dataUrl);
+      setAiScanStep('preview');
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    }
+  };
+
+  const handleProcessLabel = async () => {
+    if (!imageSrc) return;
+    setAiScanStep('loading');
+    setAiErrorMessage(null);
+    try {
+      const result = await extractLabel({ photoDataUri: imageSrc });
+      setExtractedData(result);
+      setAiScanStep('results');
+      toast({
+        title: "Etiqueta Analizada",
+        description: "Verifica la información extraída por la IA.",
+        variant: 'success'
+      });
+    } catch (error: any) {
+      console.error("Error processing label:", error);
+      setAiErrorMessage(error.message || "Ocurrió un error al procesar la etiqueta.");
+      setAiScanStep('error');
+    }
+  };
+
+  const handleUseExtractedData = () => {
+    if (extractedData) {
+      setMedicineId(extractedData.id || '');
+      setMedicineName(extractedData.name || '');
+      setPresentation(extractedData.presentation || '');
+    }
+    resetAiScan();
+  };
+  
+  const resetAiScan = () => {
+    setAiScanStep('idle');
+    setImageSrc(null);
+    setExtractedData(null);
+    setAiErrorMessage(null);
+  };
 
   const handleJsonFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -285,155 +382,226 @@ export default function AddMedicinePage() {
 
   return (
     <AuthWrapper>
-      <div className="mb-6">
-        <Button
-          variant="default"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          onClick={() => router.push('/admin')}
-          aria-label="Volver al Panel de Admin"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-      </div>
-      <div className="flex flex-col items-center justify-center">
-        <Card className="w-full max-w-lg shadow-lg">
-          <CardHeader className="text-center">
-            <PillBottle className="h-12 w-12 mx-auto text-primary mb-3" />
-            <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
-              Añadir Medicamento
-            </CardTitle>
-            <CardDescription>
-              Ingresa los detalles del medicamento o carga un archivo JSON. El ID del medicamento debe ser único.
-            </CardDescription>
-            {formattedClientNow && (
-                 <Alert variant="default" className="mt-4 text-sm bg-accent/10 border-accent/30">
-                    <Info className="h-5 w-5 text-accent" />
-                    <AlertTitle className="text-accent font-semibold">Fecha Actual del Sistema</AlertTitle>
-                    <AlertDescription className="text-accent/90">
-                        Hoy es: {formattedClientNow}. Los registros usarán esta fecha.
-                    </AlertDescription>
-                </Alert>
-            )}
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-4 mb-6">
-              <Label htmlFor="jsonUpload" className="text-base font-medium">Cargar desde JSON</Label>
-              <div className="flex items-center gap-3">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-grow"
-                >
-                  <UploadCloud className="mr-2 h-5 w-5" />
-                  Seleccionar Archivo JSON
-                </Button>
-                <Input
-                  id="jsonUpload"
-                  type="file"
-                  accept=".json"
-                  ref={fileInputRef}
-                  onChange={handleJsonFileUpload}
-                  className="hidden"
-                />
+      <Dialog open={aiScanStep !== 'idle'} onOpenChange={(isOpen) => !isOpen && resetAiScan()}>
+        <div className="mb-6">
+          <Button
+            variant="default"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            onClick={() => router.push('/admin')}
+            aria-label="Volver al Panel de Admin"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="flex flex-col items-center justify-center">
+          <Card className="w-full max-w-lg shadow-lg">
+            <CardHeader className="text-center">
+              <PillBottle className="h-12 w-12 mx-auto text-primary mb-3" />
+              <CardTitle className="text-2xl md:text-3xl font-semibold text-foreground">
+                Añadir Medicamento
+              </CardTitle>
+              <CardDescription>
+                Ingresa los detalles del medicamento o usa una de las herramientas automáticas. El ID debe ser único.
+              </CardDescription>
+              {formattedClientNow && (
+                   <Alert variant="default" className="mt-4 text-sm bg-accent/10 border-accent/30">
+                      <Info className="h-5 w-5 text-accent" />
+                      <AlertTitle className="text-accent font-semibold">Fecha Actual del Sistema</AlertTitle>
+                      <AlertDescription className="text-accent/90">
+                          Hoy es: {formattedClientNow}. Los registros usarán esta fecha.
+                      </AlertDescription>
+                  </Alert>
+              )}
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4 mb-6">
+                 <Label className="text-base font-medium">Escanear Etiqueta con IA</Label>
+                 <Button type="button" variant="outline" onClick={() => setAiScanStep('camera')} className="w-full">
+                    <Camera className="mr-2 h-5 w-5" /> Escanear Etiqueta
+                 </Button>
               </div>
-               <p className="text-xs text-muted-foreground">
-                El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD). El ID debe ser único.
-              </p>
-            </div>
-            <Separator className="my-6" />
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="medicineId">ID del Medicamento (Único)</Label>
-                <Input
-                  id="medicineId"
-                  type="text"
-                  placeholder="Ej: A0205 (será convertido a mayúsculas)"
-                  value={medicineId}
-                  onChange={(e) => setMedicineId(e.target.value)}
-                  required
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="medicineName">Nombre del Medicamento</Label>
-                <Input
-                  id="medicineName"
-                  type="text"
-                  placeholder="Ej: Omeprazol 40mg/ml"
-                  value={medicineName}
-                  onChange={(e) => setMedicineName(e.target.value)}
-                  required
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="presentation">Presentación</Label>
-                <Input
-                  id="presentation"
-                  type="text"
-                  placeholder="Ej: Inyectable, Comprimidos, Jarabe"
-                  value={presentation}
-                  onChange={(e) => setPresentation(e.target.value)}
-                  required
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="initialStock">Stock Inicial (Opcional)</Label>
-                <Input
-                  id="initialStock"
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="Ej: 1000 (o dejar vacío para 0)"
-                  value={initialStock}
-                  onChange={(e) => setInitialStock(e.target.value)}
-                  min="0"
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="manualExpirationDate">Fecha de Expiración del Stock Inicial (Opcional)</Label>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                        id="manualExpirationDate"
-                        variant={"outline"}
-                        className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !manualExpirationDate && "text-muted-foreground"
-                        )}
-                        >
-                        <CalendarIconLucide className="mr-2 h-4 w-4" />
-                        {manualExpirationDate ? formatDate(manualExpirationDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                        mode="single"
-                        selected={manualExpirationDate}
-                        onSelect={setManualExpirationDate}
-                        initialFocus
-                        locale={es}
-                        disabled={(date) => {
-                            const todayAtMidnightCal = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                            return date <= todayAtMidnightCal;
-                        }}
-                        />
-                    </PopoverContent>
-                </Popover>
-                <p className="text-xs text-muted-foreground">
-                  Requerida si ingresas stock inicial. La fecha del JSON (si existe y es válida) se usa si este campo está vacío. Debe ser futura.
+              <Separator className="my-6" />
+              <div className="space-y-4 mb-6">
+                <Label htmlFor="jsonUpload" className="text-base font-medium">Cargar desde JSON</Label>
+                <div className="flex items-center gap-3">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-grow"
+                  >
+                    <UploadCloud className="mr-2 h-5 w-5" />
+                    Seleccionar Archivo JSON
+                  </Button>
+                  <Input
+                    id="jsonUpload"
+                    type="file"
+                    accept=".json"
+                    ref={fileInputRef}
+                    onChange={handleJsonFileUpload}
+                    className="hidden"
+                  />
+                </div>
+                 <p className="text-xs text-muted-foreground">
+                  El JSON puede tener: `id`, `name`, `presentation`, `initialStock` (número/string), y `expirationDate` (string YYYY-MM-DD). El ID debe ser único.
                 </p>
               </div>
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Save className="mr-2 h-5 w-5" />
-                Guardar Medicamento
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+              <Separator className="my-6" />
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="medicineId">ID del Medicamento (Único)</Label>
+                  <Input
+                    id="medicineId"
+                    type="text"
+                    placeholder="Ej: A0205 (será convertido a mayúsculas)"
+                    value={medicineId}
+                    onChange={(e) => setMedicineId(e.target.value)}
+                    required
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="medicineName">Nombre del Medicamento</Label>
+                  <Input
+                    id="medicineName"
+                    type="text"
+                    placeholder="Ej: Omeprazol 40mg/ml"
+                    value={medicineName}
+                    onChange={(e) => setMedicineName(e.target.value)}
+                    required
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="presentation">Presentación</Label>
+                  <Input
+                    id="presentation"
+                    type="text"
+                    placeholder="Ej: Inyectable, Comprimidos, Jarabe"
+                    value={presentation}
+                    onChange={(e) => setPresentation(e.target.value)}
+                    required
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="initialStock">Stock Inicial (Opcional)</Label>
+                  <Input
+                    id="initialStock"
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Ej: 1000 (o dejar vacío para 0)"
+                    value={initialStock}
+                    onChange={(e) => setInitialStock(e.target.value)}
+                    min="0"
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manualExpirationDate">Fecha de Expiración del Stock Inicial (Opcional)</Label>
+                   <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                          id="manualExpirationDate"
+                          variant={"outline"}
+                          className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !manualExpirationDate && "text-muted-foreground"
+                          )}
+                          >
+                          <CalendarIconLucide className="mr-2 h-4 w-4" />
+                          {manualExpirationDate ? formatDate(manualExpirationDate, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                          <Calendar
+                          mode="single"
+                          selected={manualExpirationDate}
+                          onSelect={setManualExpirationDate}
+                          initialFocus
+                          locale={es}
+                          disabled={(date) => {
+                              const todayAtMidnightCal = clientNow ? new Date(clientNow.getFullYear(), clientNow.getMonth(), clientNow.getDate()) : new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                              return date <= todayAtMidnightCal;
+                          }}
+                          />
+                      </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Requerida si ingresas stock inicial. La fecha del JSON (si existe y es válida) se usa si este campo está vacío. Debe ser futura.
+                  </p>
+                </div>
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Save className="mr-2 h-5 w-5" />
+                  Guardar Medicamento
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+        <DialogContent>
+            {aiScanStep === 'camera' && (
+                <>
+                <DialogHeader>
+                    <DialogTitle>Escanear Etiqueta</DialogTitle>
+                    <DialogDescription>Apunta la cámara a la etiqueta del medicamento.</DialogDescription>
+                </DialogHeader>
+                <video ref={videoRef} className="w-full aspect-video rounded-md bg-black" autoPlay playsInline muted />
+                <DialogFooter>
+                    <Button type="button" onClick={handleTakePhoto}><Camera className="mr-2 h-4 w-4" /> Tomar Foto</Button>
+                </DialogFooter>
+                </>
+            )}
+            {aiScanStep === 'preview' && (
+                <>
+                <DialogHeader>
+                    <DialogTitle>Verificar Foto</DialogTitle>
+                    <DialogDescription>¿La imagen es clara y legible?</DialogDescription>
+                </DialogHeader>
+                {imageSrc && <Image src={imageSrc} alt="Vista previa de etiqueta" width={400} height={300} className="rounded-md" />}
+                <DialogFooter className="sm:justify-between gap-2">
+                    <Button type="button" variant="outline" onClick={() => setAiScanStep('camera')}><RefreshCw className="mr-2 h-4 w-4" /> Tomar de Nuevo</Button>
+                    <Button type="button" onClick={handleProcessLabel}><ScanSearch className="mr-2 h-4 w-4" /> Procesar</Button>
+                </DialogFooter>
+                </>
+            )}
+            {aiScanStep === 'loading' && (
+                <div className="flex flex-col items-center justify-center gap-4 text-center p-8">
+                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                    <h3 className="text-lg font-semibold">Analizando Etiqueta...</h3>
+                    <p className="text-muted-foreground text-sm">La IA está extrayendo la información.</p>
+                </div>
+            )}
+            {aiScanStep === 'results' && extractedData && (
+                <>
+                <DialogHeader>
+                    <DialogTitle>Datos Extraídos</DialogTitle>
+                    <DialogDescription>Confirma si la información es correcta.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 my-4">
+                    <div><Label>ID:</Label><Input value={extractedData.id || ''} readOnly /></div>
+                    <div><Label>Nombre:</Label><Input value={extractedData.name || ''} readOnly /></div>
+                    <div><Label>Presentación:</Label><Input value={extractedData.presentation || ''} readOnly /></div>
+                </div>
+                <DialogFooter className="sm:justify-between gap-2">
+                    <Button type="button" variant="ghost" onClick={resetAiScan}>Cancelar</Button>
+                    <Button type="button" onClick={handleUseExtractedData}><Check className="mr-2 h-4 w-4" /> Usar estos Datos</Button>
+                </DialogFooter>
+                </>
+            )}
+            {aiScanStep === 'error' && (
+                <>
+                <DialogHeader>
+                    <DialogTitle className="text-destructive">Error</DialogTitle>
+                    <DialogDescription>{aiErrorMessage || "Ocurrió un error inesperado."}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={resetAiScan}>Cerrar</Button>
+                </DialogFooter>
+                </>
+            )}
+        </DialogContent>
+      </Dialog>
     </AuthWrapper>
   );
 }
