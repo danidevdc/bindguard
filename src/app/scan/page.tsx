@@ -36,11 +36,10 @@ export default function ScanModeSelectionPage() {
               <Button
                 variant="default"
                 className="w-full h-36 text-lg bg-primary hover:bg-primary/90 text-primary-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105 p-4"
-                aria-label="Dispensar Medicamentos de Receta"
+                aria-label="Dispensar / Descargar"
               >
                 <ShoppingCart className="h-10 w-10 mb-2" />
-                Dispensar Medicamentos
-                <span className="text-xs mt-1">(Receta)</span>
+                Dispensar / Descargar
                 <ArrowRight className="h-5 w-5 mt-2 opacity-75" />
               </Button>
             </Link>
@@ -48,11 +47,10 @@ export default function ScanModeSelectionPage() {
               <Button
                 variant="default"
                 className="w-full h-36 text-lg bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105 p-4"
-                aria-label="Añadir Stock al Inventario"
+                aria-label="Añadir stock / Reingreso"
               >
                 <PackagePlus className="h-10 w-10 mb-2" />
-                Añadir Stock
-                <span className="text-xs mt-1">(Ingreso)</span>
+                Añadir stock / Reingreso
                 <ArrowRight className="h-5 w-5 mt-2 opacity-75" />
               </Button>
             </Link>

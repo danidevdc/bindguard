@@ -24,11 +24,10 @@ export default function DashboardClient() {
             <Button
               variant="default"
               className="w-full h-40 text-xl bg-accent hover:bg-accent/90 text-accent-foreground flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
-              aria-label="Escanear Medicamento"
+              aria-label="Medicamentos"
             >
               <QrCode className="h-20 w-20 mb-3" />
-              <span>Escanear</span>
-              <span>Medicamento</span>
+              <span>Medicamentos</span>
             </Button>
           </Link>
           <Link href="/inventory" passHref legacyBehavior>
@@ -42,7 +41,7 @@ export default function DashboardClient() {
             </Button>
           </Link>
           {isCurrentUserAdmin && (
-            <Link href="/scan-recipe" passHref legacyBehavior>
+            <Link href="/admin/scan-recipe" passHref legacyBehavior>
               <Button
                 variant="default"
                 className="w-full h-40 text-xl bg-purple-600 hover:bg-purple-600/90 text-white flex flex-col items-center justify-center shadow-md rounded-lg transition-transform hover:scale-105"
