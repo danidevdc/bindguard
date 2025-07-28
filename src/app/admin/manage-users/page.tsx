@@ -187,7 +187,7 @@ export default function ManageUsersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user) => (
+                      {users.filter(user => user && user.uid).map((user) => (
                         <TableRow key={user.uid}>
                           <TableCell className="font-medium">{user.email}</TableCell>
                           <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
