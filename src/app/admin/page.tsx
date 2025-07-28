@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power, LayoutList, ClipboardEdit } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power, LayoutList, ClipboardEdit, ScanSearch } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -102,6 +102,12 @@ export default function AdminPage() {
             <div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Recetas</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <Link href="/scan-recipe" passHref legacyBehavior>
+                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                    <ScanSearch className="mr-3 h-6 w-6 text-purple-600" />
+                    Escanear Receta (IA)
+                  </Button>
+                </Link>
                 <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Anular Receta')}>
                   <FileX2 className="mr-3 h-6 w-6 text-destructive" />
                   Anular Receta
@@ -131,4 +137,3 @@ export default function AdminPage() {
     </AuthWrapper>
   );
 }
-
