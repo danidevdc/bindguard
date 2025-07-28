@@ -30,7 +30,7 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-accent bg-background/70 backdrop-blur-sm text-accent-foreground [--toast-close-color:hsl(var(--accent-foreground))] group-[.default]:text-accent",
+        default: "border-accent bg-background/70 backdrop-blur-sm text-accent [--toast-close-color:hsl(var(--accent))] group-[.default]:text-accent",
         destructive: "border-destructive bg-background/70 backdrop-blur-sm text-destructive [--toast-close-color:hsl(var(--destructive))] group-[.destructive]:text-destructive",
         success: "border-primary bg-background/70 backdrop-blur-sm text-primary [--toast-close-color:hsl(var(--primary))] group-[.success]:text-primary",
       },
