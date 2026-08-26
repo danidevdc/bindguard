@@ -1,5 +1,7 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
+# Firebase client configuration is injected automatically by App Hosting.
+# Configure GOOGLE_GENAI_API_KEY as a server-side secret in the Firebase console.
 
 runConfig:
   # Increase this value if you'd like to automatically spin up

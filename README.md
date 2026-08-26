@@ -4,6 +4,22 @@ BindGuard is a web application for pharmacy inventory control, medicine dispensi
 
 It was built with **Next.js 15**, **TypeScript**, **Firebase Authentication**, **Cloud Firestore**, **Tailwind CSS**, and **Genkit / Google AI**. The application is designed to work well on desktop and mobile devices and focuses on replacing manual inventory cards with a digital workflow.
 
+## Interface preview
+
+### Login
+
+![BindGuard login screen](docs/screenshots/login-desktop.png)
+
+### User registration
+
+![BindGuard user registration screen](docs/screenshots/register-desktop.png)
+
+### Password recovery on mobile
+
+<p align="center">
+  <img src="docs/screenshots/forgot-password-mobile.png" alt="BindGuard password recovery screen on mobile" width="390">
+</p>
+
 ## Overview
 
 BindGuard organizes pharmacy inventory around digital medicine records called **Bindcards**. Each medicine stores its current stock and a chronological history of stock entries and dispensing operations.
@@ -241,7 +257,7 @@ npm install
 
 ## Firebase configuration
 
-Create a `.env.local` file in the project root and provide your Firebase Web App configuration.
+Create `.env.local` from the committed `.env.example` template and provide your Firebase Web App configuration.
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
@@ -261,6 +277,8 @@ The application requires at least these values to initialize Firebase correctly:
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 Do not commit `.env.local` or private credentials to the repository.
+
+Firebase App Hosting injects its web app configuration during the production build. Local development still requires `.env.local`.
 
 ## Google AI / Genkit configuration
 
@@ -391,7 +409,7 @@ BindGuard handles inventory and potentially prescription-related information, so
 
 Recommended improvements include:
 
-- Move privileged administrator authorization to Firebase custom claims or a trusted backend instead of determining administrator status in client-side registration code.
+- Prefer Firebase custom claims or a trusted backend for long-term administrator provisioning.
 - Restrict inventory mutations according to explicit roles and allowed fields.
 - Add server-side validation for stock operations.
 - Implement immutable or independently auditable transaction logs.
@@ -407,8 +425,8 @@ The repository is an actively developed application and some areas remain incomp
 - AI prescription scanning is not yet connected to final inventory dispensing.
 - Deleting a user from the administration interface removes the Firestore profile but does not delete the corresponding Firebase Authentication account.
 - Firebase emulator support exists in the source but is currently disabled.
-- The administrator assignment mechanism should be redesigned before production use.
-- Additional automated tests and CI checks would improve reliability.
+- The first administrator must be provisioned manually in Firestore or through a trusted backend.
+- Automated permission and concurrent stock mutation tests are still needed.
 
 ## Deployment
 
@@ -422,6 +440,32 @@ runConfig:
 ```
 
 Firebase environment variables and any Google AI credentials required by Genkit must be configured in the hosting environment separately.
+
+### Continuous deployment
+
+The repository includes `.github/workflows/ci.yml`. Pull requests and pushes to `main` run:
+
+1. `npm ci`
+2. `npm run typecheck`
+3. `npm run build`
+
+For automatic production rollouts, connect this GitHub repository to a Firebase App Hosting backend with:
+
+- Live branch: `main`
+- App root directory: `/`
+- Automatic rollouts: enabled
+
+App Hosting deploys a new rollout after a validated commit reaches the configured live branch. Configure `GOOGLE_GENAI_API_KEY` as a server-side secret in App Hosting before enabling the AI prescription flows.
+
+App Hosting does not deploy Cloud Firestore rules. After reviewing permission changes, deploy them separately with:
+
+```bash
+firebase deploy --only firestore:rules --project YOUR_PROJECT_ID
+```
+
+### Rollback
+
+If login, inventory reads, or stock updates fail after a rollout, restore the previous successful build from the App Hosting rollout history before investigating forward fixes.
 
 ## Design goals
 

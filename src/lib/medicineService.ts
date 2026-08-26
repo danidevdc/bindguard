@@ -39,7 +39,17 @@ export interface Medicine {
   isBlocked: boolean; // New field
 }
 
-export const mockMedicinesForFirestore: Omit<Medicine, 'lastUpdated' | 'dispensingHistory'> & { dispensingHistory: Omit<DispensingRecord, 'date' | 'expirationDate' | 'id'> & { id?: string, date: string, expirationDate?: string}[] }[] = [
+type MockDispensingRecord = Omit<DispensingRecord, 'date' | 'expirationDate' | 'id'> & {
+  id?: string;
+  date: string;
+  expirationDate?: string;
+};
+
+type MockMedicine = Omit<Medicine, 'lastUpdated' | 'dispensingHistory'> & {
+  dispensingHistory: MockDispensingRecord[];
+};
+
+export const mockMedicinesForFirestore: MockMedicine[] = [
   {
     id: 'MED003',
     name: 'Lisinopril 10mg Tablets',

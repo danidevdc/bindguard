@@ -373,9 +373,9 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                                   isCurrentlyExpired ? "text-red-600 dark:text-red-500" :
                                   isExpiringSoon ? "text-orange-500 dark:text-orange-400" : "text-green-700 dark:text-green-400"
                               )}>
-                              {isCurrentlyExpired && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expirado"/>}
-                              {isExpiringSoon && !isCurrentlyExpired && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Expira pronto"/>}
-                              {!isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" title="Vigente"/>}
+                              {isCurrentlyExpired && <ShieldAlert className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" aria-label="Expirado"/>}
+                              {isExpiringSoon && !isCurrentlyExpired && <AlertTriangle className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" aria-label="Expira pronto"/>}
+                              {!isCurrentlyExpired && !isExpiringSoon && <ShieldCheck className="h-3 md:h-3.5 w-3 md:w-3.5 shrink-0" aria-label="Vigente"/>}
                               {inferredRecordExpDateJs ? format(inferredRecordExpDateJs, 'MM/yy', { locale: es }) : <span className="text-xs text-muted-foreground">N/A</span>}
                             </div>
                         </td>

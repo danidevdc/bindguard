@@ -74,14 +74,20 @@ export function useAuth() {
         if (userData) {
           setCurrentUserData(userData);
           setIsCurrentUserAdmin(!!userData.isAdmin);
+          setIsAuthenticated(true);
         } else {
-          // This case might happen if user exists in Auth but not in Firestore.
-          // Decide how to handle this, e.g., create a Firestore record or log them out.
           console.warn(`User with UID ${user.uid} exists in Firebase Auth but not in Firestore.`);
+          await signOut(auth);
+          setFirebaseUser(null);
           setCurrentUserData(null);
           setIsCurrentUserAdmin(false);
+          setIsAuthenticated(false);
+          toast({
+            title: 'Perfil no configurado',
+            description: 'La cuenta existe, pero no tiene un perfil habilitado en Firestore.',
+            variant: 'destructive',
+          });
         }
-        setIsAuthenticated(true);
       } else {
         setFirebaseUser(null);
         setCurrentUserData(null);
@@ -89,6 +95,15 @@ export function useAuth() {
         setIsCurrentUserAdmin(false);
       }
       setIsLoading(false);
+    }, (error) => {
+      console.error('Firebase auth state error:', error);
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      toast({
+        title: 'Firebase no disponible',
+        description: 'No se pudo comprobar la sesion. Revisa la configuracion de Firebase.',
+        variant: 'destructive',
+      });
     });
 
     return () => unsubscribe();
@@ -103,7 +118,16 @@ export function useAuth() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userData = await fetchUserData(userCredential.user.uid);
-      const capitalizedFirstName = userData?.firstName.charAt(0).toUpperCase() + userData!.firstName.slice(1).toLowerCase();
+      if (!userData) {
+        await signOut(auth);
+        toast({
+          title: 'Perfil no configurado',
+          description: 'La cuenta fue autenticada, pero no tiene un perfil habilitado en Firestore.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const capitalizedFirstName = userData.firstName.charAt(0).toUpperCase() + userData.firstName.slice(1).toLowerCase();
       toast({ title: "Inicio de Sesión Exitoso", description: `¡Bienvenido de nuevo, ${capitalizedFirstName}!` });
       router.push('/dashboard');
     } catch (error: any) {
@@ -111,6 +135,10 @@ export function useAuth() {
       let description = "Ocurrió un problema al iniciar sesión.";
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
         description = "Credenciales incorrectas. Verifica tu correo y contraseña.";
+      } else if (errorCode === 'auth/api-key-not-valid' || errorCode === 'auth/configuration-not-found' || errorCode === 'auth/operation-not-allowed') {
+        description = 'Firebase Authentication no está configurado correctamente para esta aplicación.';
+      } else if (errorCode === 'auth/network-request-failed') {
+        description = 'No se pudo conectar con Firebase. Revisa tu conexión e inténtalo de nuevo.';
       }
       toast({ title: "Error de Inicio de Sesión", description, variant: "destructive" });
     } finally {
@@ -132,14 +160,12 @@ export function useAuth() {
       // Step 2: Create user document in Firestore
       const newUserDocRef = doc(db, 'users', user.uid);
       
-      const isAdmin = email.toLowerCase() === 'daniish77@gmail.com';
-
       const newUser: Omit<UserData, 'createdAt'> = {
         uid: user.uid,
         email: user.email,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        isAdmin: isAdmin,
+        isAdmin: false,
         activityLog: [],
       };
       await setDoc(newUserDocRef, {
@@ -148,11 +174,7 @@ export function useAuth() {
       });
 
       const capitalizedFirstName = newUser.firstName.charAt(0).toUpperCase() + newUser.firstName.slice(1).toLowerCase();
-      if(isAdmin){
-         toast({ title: "Registro de Admin Exitoso", description: `Cuenta de Administrador creada para ${capitalizedFirstName}.`, variant: 'success' });
-      } else {
-         toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}.`, variant: 'success' });
-      }
+      toast({ title: "Registro Exitoso", description: `Cuenta creada para ${capitalizedFirstName}.`, variant: 'success' });
       router.push('/login');
 
     } catch (error: any) {

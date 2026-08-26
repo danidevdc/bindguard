@@ -1,9 +1,14 @@
 
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getAuth, type Auth, connectAuthEmulator } from 'firebase/auth'; // Import Auth
+import {
+  getApps,
+  initializeApp,
+  type FirebaseApp,
+  type FirebaseOptions,
+} from 'firebase/app';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAuth, type Auth } from 'firebase/auth';
 
-const firebaseConfig = {
+const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -13,45 +18,32 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-let app: FirebaseApp;
-let db: Firestore;
-let auth: Auth; 
+const requiredConfigKeys: Array<keyof FirebaseOptions> = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'appId',
+];
 
-// Check if all necessary Firebase config keys are present
-const requiredConfigKeys: (keyof typeof firebaseConfig)[] = ['apiKey', 'authDomain', 'projectId', 'appId'];
-const missingKeys = requiredConfigKeys.filter(key => !firebaseConfig[key]);
+const hasExplicitConfig = requiredConfigKeys.every((key) => firebaseConfig[key]);
 
-if (missingKeys.length > 0) {
-  console.error(`Firebase initialization failed: Missing config values for ${missingKeys.join(', ')}. Please check your .env.local file or Firebase setup.`);
-  // We don't initialize app, db, or auth if config is missing to prevent further errors.
-} else {
-  // Initialize Firebase App
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log("Firebase App Initialized successfully.");
-  } else {
-    app = getApps()[0];
-    console.log("Firebase App already initialized. Getting instance.");
-  }
+function initializeFirebaseApp(): FirebaseApp {
+  const existingApp = getApps()[0];
+  if (existingApp) return existingApp;
 
-  // Get Firestore instance
-  db = getFirestore(app);
-  // Get Auth instance
-  auth = getAuth(app);
-
-  // NOTE: Emulator connection logic is temporarily disabled to resolve connection issues.
-  // The application will connect directly to the cloud instances of Firebase services.
-  const useEmulators = false; // Set to false to force connection to cloud services
-  
-  if (process.env.NODE_ENV === 'development' && useEmulators) {
-    // This block is currently disabled.
-    console.log("Connecting to Firebase Emulators (currently disabled, connecting to cloud)...");
-    // To re-enable, set useEmulators to true and ensure Firebase Emulators are running.
-    // connectFirestoreEmulator(db, 'localhost', 8080);
-    // connectAuthEmulator(auth, "http://localhost:9099");
-  } else {
-    console.log("Connecting to production Cloud Firestore and Firebase Auth.");
+  try {
+    // App Hosting generates Firebase defaults from FIREBASE_WEBAPP_CONFIG.
+    return hasExplicitConfig ? initializeApp(firebaseConfig) : initializeApp();
+  } catch {
+    const missingKeys = requiredConfigKeys.filter((key) => !firebaseConfig[key]);
+    throw new Error(
+      `Firebase is not configured. Add the required values to .env.local (${missingKeys.join(', ')}) or configure a Firebase App Hosting web app.`
+    );
   }
 }
+
+const app: FirebaseApp = initializeFirebaseApp();
+const db: Firestore = getFirestore(app);
+const auth: Auth = getAuth(app);
 
 export { db, auth, app };
