@@ -35,19 +35,20 @@ export default function InventoryList({ medicines, isAdminView = false, onRefres
   }
 
   return (
-    <div className="space-y-6">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+    <div className="space-y-5">
+      <div className="relative max-w-xl">
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Buscar medicamentos por nombre, código o descripción..."
+          placeholder="Buscar por nombre, código o descripción"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-lg mx-auto pl-10 pr-4 py-2 shadow-sm"
+          className="pl-10"
+          aria-label="Buscar Bindcards"
         />
       </div>
       {filteredMedicines.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 gap-5">
           {filteredMedicines.map((medicine) => (
             <InventoryCard
               key={medicine.id}
@@ -58,9 +59,12 @@ export default function InventoryList({ medicines, isAdminView = false, onRefres
           ))}
         </div>
       ) : (
-         <p className="text-center text-muted-foreground py-8">
-          No se encontraron medicamentos que coincidan con los criterios de búsqueda.
-        </p>
+        <div className="rounded-lg border border-dashed bg-card px-6 py-12 text-center">
+          <p className="font-semibold">Sin resultados</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            No encontramos medicamentos que coincidan con “{searchTerm}”.
+          </p>
+        </div>
       )}
     </div>
   );

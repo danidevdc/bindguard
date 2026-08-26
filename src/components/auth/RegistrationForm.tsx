@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus, Eye, EyeOff, AlertTriangle, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
@@ -71,12 +71,8 @@ export default function RegistrationForm() {
   };
 
   return (
-    <Card className="shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl text-center">Registro de Usuario</CardTitle>
-        <CardDescription className="text-center">Crea tu cuenta para acceder al sistema.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className="border-0 shadow-none">
+      <CardContent className="p-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -88,7 +84,7 @@ export default function RegistrationForm() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
-                className="bg-background"
+                autoComplete="given-name"
               />
             </div>
             <div className="space-y-1">
@@ -100,7 +96,7 @@ export default function RegistrationForm() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
-                className="bg-background"
+                autoComplete="family-name"
               />
             </div>
           </div>
@@ -116,7 +112,8 @@ export default function RegistrationForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="bg-background pl-10"
+                    autoComplete="email"
+                    className="pl-10"
                 />
             </div>
           </div>
@@ -131,7 +128,8 @@ export default function RegistrationForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-background pr-10"
+                autoComplete="new-password"
+                className="pr-10"
               />
               <Button
                 type="button"
@@ -164,7 +162,8 @@ export default function RegistrationForm() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="bg-background pr-10"
+                autoComplete="new-password"
+                className="pr-10"
               />
               <Button
                 type="button"
@@ -184,14 +183,15 @@ export default function RegistrationForm() {
 
           <Button 
             type="submit" 
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
+            size="lg"
+            className="w-full"
             disabled={isLoading || !firstName || !lastName || !email || !password || password !== confirmPassword}
           >
             <UserPlus className="mr-2 h-5 w-5" />
             {isLoading ? 'Registrando...' : 'Crear Cuenta'}
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
+        <p className="mt-7 border-t pt-6 text-center text-sm text-muted-foreground">
           ¿Ya tienes una cuenta?{' '}
           <Link href="/login" className="font-medium text-primary hover:underline">
             Inicia sesión

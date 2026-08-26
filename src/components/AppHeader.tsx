@@ -1,58 +1,97 @@
-
 "use client";
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { LogOut, Home as HomeIcon } from 'lucide-react'; 
+import { usePathname } from 'next/navigation';
+import { Boxes, LayoutDashboard, LogOut, ScanLine, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation'; // Import useRouter
-import Image from 'next/image';
+import { cn } from '@/lib/utils';
+
+const navigation = [
+  { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
+  { href: '/scan', label: 'Movimientos', icon: ScanLine },
+  { href: '/inventory', label: 'Bindcards', icon: Boxes },
+];
 
 export default function AppHeader() {
-  const { logout } = useAuth();
-  const router = useRouter(); // Initialize useRouter
-  const LOCAL_STORAGE_KEY = 'inProgressPrescription';
-
-  const handleNavigateHome = () => {
-    try {
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
-    } catch (error) {
-      console.error("Could not clear in-progress prescription from localStorage", error);
-    }
-    router.push('/dashboard');
-  };
-
+  const pathname = usePathname();
+  const { currentUserData, isCurrentUserAdmin, logout } = useAuth();
+  const initial = currentUserData?.firstName?.charAt(0).toUpperCase() || 'B';
 
   return (
-    <header className="bg-card shadow-md">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <button onClick={handleNavigateHome} className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity">
-          <Image src="/icon.png" alt="BindGuard Logo" width={28} height={28} />
-          <h1 className="text-xl font-semibold">BindGuard</h1>
-        </button>
-        <div className="flex items-center space-x-2"> 
+    <header className="sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 px-3 sm:px-5 lg:px-8">
+        <Link
+          href="/dashboard"
+          className="mr-auto flex min-w-0 items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white">
+            <Image src="/icon.png" alt="" width={26} height={26} priority />
+          </span>
+          <span className="hidden text-lg font-semibold text-white sm:block">BindGuard</span>
+        </Link>
+
+        <nav aria-label="Navegación principal" className="flex items-center gap-1">
+          {navigation.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'flex h-10 items-center gap-2 rounded-md px-2.5 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-sidebar-accent text-white'
+                    : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-white'
+                )}
+                title={label}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden lg:inline">{label}</span>
+              </Link>
+            );
+          })}
+
+          {isCurrentUserAdmin && (
+            <Link
+              href="/admin"
+              aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
+              className={cn(
+                'flex h-10 items-center gap-2 rounded-md px-2.5 text-sm font-medium transition-colors',
+                pathname.startsWith('/admin')
+                  ? 'bg-sidebar-accent text-white'
+                  : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-white'
+              )}
+              title="Administración"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span className="hidden lg:inline">Administrar</span>
+            </Link>
+          )}
+        </nav>
+
+        <div className="ml-1 flex items-center gap-2 border-l border-sidebar-border pl-3">
+          <div
+            className="hidden h-9 w-9 items-center justify-center rounded-full bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground sm:flex"
+            aria-label={currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : 'Usuario'}
+            title={currentUserData ? `${currentUserData.firstName} ${currentUserData.lastName}` : 'Usuario'}
+          >
+            {initial}
+          </div>
           <Button
-            variant="ghost" // Changed to ghost for transparent background by default
-            className="text-primary hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
-            onClick={handleNavigateHome}
-            aria-label="Inicio"
+            variant="ghost"
+            size="icon"
+            onClick={logout}
+            className="text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-white"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
           >
-            <HomeIcon className="mr-2 h-5 w-5" />
-            Inicio
-          </Button>
-          <Button 
-            variant="ghost" // Changed to ghost for transparent background by default
-            onClick={logout} 
-            className="text-primary hover:bg-primary/10 hover:text-primary [&>svg]:text-primary"
-            aria-label="Salir"
-          >
-            <LogOut className="mr-2 h-5 w-5" />
-            Salir
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
     </header>
   );
 }
-
-    

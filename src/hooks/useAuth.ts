@@ -1,7 +1,15 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
@@ -40,7 +48,7 @@ export interface ActivityLogEntry {
   details?: string;
 }
 
-export function useAuth() {
+function useAuthState() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [currentUserData, setCurrentUserData] = useState<UserData | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -281,4 +289,24 @@ export function useAuth() {
     getCurrentUserUsername, // Maintain for compatibility if needed elsewhere
     getCurrentUserDetails,
   };
+}
+
+type AuthContextValue = ReturnType<typeof useAuthState>;
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const authState = useAuthState();
+
+  return createElement(AuthContext.Provider, { value: authState }, children);
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth must be used inside AuthProvider.');
+  }
+
+  return context;
 }

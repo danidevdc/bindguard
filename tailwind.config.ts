@@ -9,6 +9,10 @@ export default {
   ],
   theme: {
   	extend: {
+		fontFamily: {
+			sans: ['var(--font-manrope)', 'sans-serif'],
+			mono: ['var(--font-ibm-plex-mono)', 'monospace'],
+		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

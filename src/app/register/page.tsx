@@ -1,6 +1,6 @@
 
 import RegistrationForm from '@/components/auth/RegistrationForm';
-import { UserRoundPlus } from 'lucide-react';
+import AuthShell from '@/components/auth/AuthShell';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,18 +10,14 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <UserRoundPlus className="h-16 w-16 mx-auto text-primary mb-4" />
-          <h1 className="text-3xl font-bold text-foreground">Crear Cuenta</h1>
-          <p className="text-muted-foreground">Regístrate para empezar a usar BindGuard.</p>
-        </div>
-        <RegistrationForm />
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} BindGuard.
-        </p>
-      </div>
-    </div>
+    <AuthShell
+      eyebrow="Nuevo usuario"
+      title="Crea tu cuenta"
+      description="Completa tus datos para solicitar acceso al inventario."
+      backHref="/login"
+      backLabel="Volver al acceso"
+    >
+      <RegistrationForm />
+    </AuthShell>
   );
 }

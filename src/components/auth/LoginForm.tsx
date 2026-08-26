@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { LogIn, Eye, EyeOff, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,13 +32,9 @@ export default function LoginForm() {
   };
 
   return (
-    <Card className="shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl text-center">Iniciar Sesión</CardTitle>
-        <CardDescription className="text-center">Ingresa tus credenciales para acceder al sistema.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <Card className="border-0 shadow-none">
+      <CardContent className="p-0">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">Correo Electrónico</Label>
              <div className="relative">
@@ -50,7 +46,8 @@ export default function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-background pl-10"
+                autoComplete="email"
+                className="pl-10"
                 />
             </div>
           </div>
@@ -64,7 +61,8 @@ export default function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-background pr-10"
+                autoComplete="current-password"
+                className="pr-10"
               />
               <Button
                 type="button"
@@ -78,14 +76,20 @@ export default function LoginForm() {
               </Button>
             </div>
           </div>
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading}>
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
             <LogIn className="mr-2 h-5 w-5" />
             {isLoading ? 'Verificando...' : 'Ingresar'}
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm">
-          <Link href="/forgot-password" passHref legacyBehavior>
-            <a className="font-medium text-primary hover:underline">¿Olvidaste tu contraseña?</a>
+        <p className="mt-5 text-center text-sm">
+          <Link href="/forgot-password" className="font-semibold text-primary hover:underline">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
+        <p className="mt-7 border-t pt-6 text-center text-sm text-muted-foreground">
+          ¿No tienes una cuenta?{' '}
+          <Link href="/register" className="font-semibold text-primary hover:underline">
+            Regístrate
           </Link>
         </p>
       </CardContent>

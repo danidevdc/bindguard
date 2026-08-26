@@ -11,7 +11,6 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import * as XLSX from 'xlsx';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
   AlertDialog,
@@ -103,7 +102,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
     return diffDays > 0 && diffDays <= daysThreshold;
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (!clientNow) {
       toast({ title: "Error", description: "Por favor, espera a que la fecha se cargue.", variant: "destructive"});
       return;
@@ -157,6 +156,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
       ]);
     });
 
+    const XLSX = await import('xlsx');
     const worksheet = XLSX.utils.aoa_to_sheet(dataForExcel);
     worksheet['!cols'] = [
       { wch: 15 }, { wch: 15 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 15 }
@@ -239,7 +239,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
   return (
     <>
     <AlertDialog open={!!recordToDelete} onOpenChange={(isOpen) => { if (!isOpen) setRecordToDelete(null); }}>
-      <Card className={cn("flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300", medicine.isBlocked && "border-destructive border-2")}>
+      <Card className={cn("flex h-full flex-col overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg", medicine.isBlocked && "border-destructive")}>
         <CardHeader className="pb-3 md:pb-4 flex flex-row justify-between items-start">
           <div>
             <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>

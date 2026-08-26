@@ -233,7 +233,7 @@ bindguard/
 
 For local development you will need:
 
-- Node.js 20 or newer recommended.
+- Node.js 22 recommended to match Firebase App Hosting.
 - npm.
 - A Firebase project.
 - Firebase Authentication with Email/Password enabled.
