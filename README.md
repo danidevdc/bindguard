@@ -2,6 +2,10 @@
 
 BindGuard is a web application for pharmacy inventory control, medicine dispensing, stock entries, QR-based identification, and traceability of medicine movements.
 
+**Current version:** secure inventory API, atomic prescription dispensing, explicit user roles, responsive Bindcard grid, and Firebase App Hosting continuous deployment.
+
+**Production:** https://bindguard--rxlocal-inventory.us-east4.hosted.app
+
 It was built with **Next.js 15**, **TypeScript**, **Firebase Authentication**, **Cloud Firestore**, **Tailwind CSS**, and **Genkit / Google AI**. The application is designed to work well on desktop and mobile devices and focuses on replacing manual inventory cards with a digital workflow.
 
 ## Interface preview
@@ -49,8 +53,9 @@ Features include:
 - Password recovery by email.
 - Protected application routes.
 - User profiles stored in Firestore.
-- Basic administrator role support.
+- Explicit `admin`, `operator`, `viewer`, and `pending` roles.
 - Administrative user management screens.
+- New registrations start as `pending` and require administrative approval before operating inventory.
 
 ### Medicine inventory — Bindcards
 
@@ -65,7 +70,7 @@ Each medicine is stored as a Firestore document containing information such as:
 - Blocked / active status.
 - Complete dispensing and stocking history.
 
-The inventory interface loads the current information directly from Firestore and displays the medicines as digital **Bindcards**.
+The inventory interface loads the current information directly from Firestore and displays the medicines as digital **Bindcards**. The list uses one column on mobile and laptops and two columns on wide desktop screens, with search and visible result counts.
 
 ### Medicine dispensing
 
@@ -84,7 +89,7 @@ Typical flow:
 
 BindGuard validates available stock before allowing a medicine to be dispensed.
 
-Stock updates are executed through Firestore transactions so concurrent inventory changes are handled more safely than simple client-side updates.
+Stock updates are sent to authenticated Next.js server endpoints. Firebase Admin verifies the caller and the server executes an idempotent Firestore transaction. Multi-medicine prescriptions are committed atomically: either every requested stock movement succeeds or none is written.
 
 ### QR scanning
 
@@ -167,7 +172,7 @@ The module uses **Genkit** with **Google AI / Gemini** and attempts to identify:
 
 The extracted information is shown to the user for manual verification and correction.
 
-> **Status:** experimental. The current interface can capture and analyze a prescription, but the final "Confirm and Dispense" action from the AI extraction screen is not yet connected to the normal dispensing workflow.
+> **Status:** experimental. Extracted information requires human verification. Confirmed multi-medicine dispensing uses the secure atomic inventory endpoint, while persistent prescription-image archiving, patient/doctor records, and daily Excel exports remain roadmap work.
 
 AI/OCR output must therefore be treated as assistive information and verified by a human before any pharmacy operation.
 
@@ -206,6 +211,7 @@ bindguard/
 │   │   ├── dev.ts
 │   │   └── genkit.ts
 │   ├── app/
+│   │   ├── api/inventory/
 │   │   ├── admin/
 │   │   ├── dashboard/
 │   │   ├── dispense/
@@ -220,6 +226,8 @@ bindguard/
 │   ├── hooks/
 │   └── lib/
 │       ├── firebase.ts
+│       ├── server/firebaseAdmin.ts
+│       ├── server/inventory.ts
 │       └── medicineService.ts
 ├── apphosting.yaml
 ├── firestore.rules
@@ -341,6 +349,12 @@ npm run typecheck
 Runs TypeScript validation without generating output.
 
 ```bash
+npm run lint
+```
+
+Runs ESLint with the Next.js core web vitals and TypeScript rules.
+
+```bash
 npm run genkit:watch
 ```
 
@@ -359,6 +373,7 @@ Representative user document:
   firstName: string,
   lastName: string,
   isAdmin?: boolean,
+  role?: 'admin' | 'operator' | 'viewer' | 'pending',
   createdAt?: Timestamp,
   activityLog?: ActivityLogEntry[]
 }
@@ -402,9 +417,10 @@ The repository includes `firestore.rules`.
 At a high level, the current rules allow:
 
 - Authenticated users to read medicines.
-- Authenticated users to update medicine documents for stock operations.
-- Administrators to create and delete medicines.
-- Users to read/update/delete their own user profile.
+- Inventory operators to mutate stock only through authenticated server endpoints.
+- Administrators to manage medicine documents and assign permitted user roles.
+- Users to read their own profile without changing their own role or administrator status.
+- New users to create only a non-admin `pending` profile.
 - Administrators to list user profiles.
 
 Before using BindGuard in a production or regulated healthcare environment, these rules should be reviewed and hardened according to the organization's authorization model and audit requirements.
@@ -413,11 +429,16 @@ Before using BindGuard in a production or regulated healthcare environment, thes
 
 BindGuard handles inventory and potentially prescription-related information, so production deployments should apply stricter controls than a development prototype.
 
+Current controls include:
+
+- Revocation-aware Firebase ID-token verification on inventory endpoints.
+- Server-side role and payload validation.
+- Idempotent operation records.
+- Atomic multi-medicine prescription dispensing.
+- Firestore rules that block direct operator stock writes.
+
 Recommended improvements include:
 
-- Prefer Firebase custom claims or a trusted backend for long-term administrator provisioning.
-- Restrict inventory mutations according to explicit roles and allowed fields.
-- Add server-side validation for stock operations.
 - Implement immutable or independently auditable transaction logs.
 - Define retention and privacy rules for prescription images and patient-related data.
 - Avoid storing unnecessary patient information.
@@ -428,10 +449,11 @@ Recommended improvements include:
 
 The repository is an actively developed application and some areas remain incomplete or prototype-level:
 
-- AI prescription scanning is not yet connected to final inventory dispensing.
+- Prescription-image archiving, normalized patient/doctor records, and daily Excel exports are not yet implemented.
 - Deleting a user from the administration interface removes the Firestore profile but does not delete the corresponding Firebase Authentication account.
 - Firebase emulator support exists in the source but is currently disabled.
-- The first administrator must be provisioned manually in Firestore or through a trusted backend.
+- The administration UI still needs a complete role-approval workflow for new `pending` users.
+- Medicine movement history is embedded in each medicine document and should migrate to a paginated subcollection or relational database before high-volume use.
 - Automated permission and concurrent stock mutation tests are still needed.
 
 ## Deployment
@@ -452,8 +474,10 @@ Firebase environment variables and any Google AI credentials required by Genkit 
 The repository includes `.github/workflows/ci.yml`. Pull requests and pushes to `main` run:
 
 1. `npm ci`
-2. `npm run typecheck`
-3. `npm run build`
+2. `npm audit --omit=dev --audit-level=critical`
+3. `npm run typecheck`
+4. `npm run lint`
+5. `npm run build`
 
 For automatic production rollouts, connect this GitHub repository to a Firebase App Hosting backend with:
 
@@ -491,6 +515,8 @@ The original design direction emphasizes:
 Potential next steps for the project include:
 
 - Connect AI prescription extraction directly to the validated dispensing workflow.
+- Store reviewed prescriptions with patient, insured-card, doctor, folder date, and prescription date metadata.
+- Generate one reviewed daily Excel export matching each physical prescription folder.
 - Add medicine lot/batch-level inventory instead of storing only aggregate stock.
 - Track expiration by lot.
 - Add low-stock and near-expiration alerts.
