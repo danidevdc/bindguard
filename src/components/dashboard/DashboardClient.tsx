@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -42,13 +43,19 @@ const mainActions = [
 export default function DashboardClient() {
   const { currentUserData, isCurrentUserAdmin } = useAuth();
   const firstName = currentUserData?.firstName || 'Usuario';
+  const [greeting, setGreeting] = useState('Hola');
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches');
+  }, []);
 
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">Panel operativo</p>
-          <h1 className="page-heading mt-2">Buen día, {firstName}</h1>
+          <h1 className="page-heading mt-2">{greeting}, {firstName}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Selecciona una operación para continuar.
           </p>

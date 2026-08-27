@@ -59,10 +59,11 @@ export default function InventoryPage() {
         </div>
         <div className="space-y-8">
           <Skeleton className="h-10 w-full max-w-lg mx-auto" /> {/* Search bar skeleton */}
-          <div className="grid grid-cols-1 gap-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
             <Skeleton className="h-64 w-full rounded-lg" />
             <Skeleton className="h-64 w-full rounded-lg" />
             <Skeleton className="h-64 w-full rounded-lg" />
+            <Skeleton className="hidden h-64 w-full rounded-lg xl:block" />
           </div>
         </div>
       </AuthWrapper>

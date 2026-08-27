@@ -36,7 +36,8 @@ export default function InventoryList({ medicines, isAdminView = false, onRefres
 
   return (
     <div className="space-y-5">
-      <div className="relative max-w-xl">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full max-w-xl">
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
@@ -46,9 +47,13 @@ export default function InventoryList({ medicines, isAdminView = false, onRefres
           className="pl-10"
           aria-label="Buscar Bindcards"
         />
+        </div>
+        <p className="shrink-0 text-sm text-muted-foreground" aria-live="polite">
+          {filteredMedicines.length} {filteredMedicines.length === 1 ? 'resultado' : 'resultados'}
+        </p>
       </div>
       {filteredMedicines.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5">
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
           {filteredMedicines.map((medicine) => (
             <InventoryCard
               key={medicine.id}

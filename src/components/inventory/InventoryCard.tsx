@@ -240,13 +240,13 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
     <>
     <AlertDialog open={!!recordToDelete} onOpenChange={(isOpen) => { if (!isOpen) setRecordToDelete(null); }}>
       <Card className={cn("flex h-full flex-col overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg", medicine.isBlocked && "border-destructive")}>
-        <CardHeader className="pb-3 md:pb-4 flex flex-row justify-between items-start">
-          <div>
-            <CardTitle className="text-lg md:text-xl text-primary">{medicine.name}</CardTitle>
+        <CardHeader className="flex flex-col items-start gap-4 pb-3 sm:flex-row sm:justify-between md:pb-4">
+          <div className="min-w-0">
+            <CardTitle className="break-words text-lg text-primary md:text-xl">{medicine.name}</CardTitle>
             <CardDescription className="text-sm text-muted-foreground mt-0.5">
               {medicine.presentation}
             </CardDescription>
-            <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <Badge
                   variant={"secondary"}
                   className="whitespace-nowrap text-xs px-2 py-0.5 inline-block"
@@ -262,7 +262,7 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-row gap-2 sm:flex-col sm:items-end sm:gap-1.5">
              <Button
                 onClick={() => setQrDialogMedicine(medicine)}
                 size="sm"
@@ -281,7 +281,8 @@ export default function InventoryCard({ medicine, isAdminView = false, onRefresh
                 title="Descargar Ficha Excel"
               >
                 <Download className="mr-1.5 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                Descargar Ficha
+                <span className="hidden sm:inline">Descargar ficha</span>
+                <span className="sm:hidden">Excel</span>
               </Button>
             </div>
         </CardHeader>
