@@ -38,6 +38,7 @@ export interface UserData {
   firstName: string;
   lastName: string;
   isAdmin?: boolean;
+  role?: 'admin' | 'operator' | 'viewer' | 'pending';
   createdAt?: Timestamp;
   activityLog?: ActivityLogEntry[];
 }
@@ -174,6 +175,7 @@ function useAuthState() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         isAdmin: false,
+        role: 'pending',
         activityLog: [],
       };
       await setDoc(newUserDocRef, {

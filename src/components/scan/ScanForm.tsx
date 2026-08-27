@@ -17,9 +17,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { type Medicine, getMedicineByIdFromFirestore, updateMedicineStockInFirestore, type DispensingRecord } from '@/lib/medicineService';
+import { type Medicine, getMedicineByIdFromFirestore, dispensePrescriptionInFirestore, type DispensingRecord } from '@/lib/medicineService';
 import QrScanner from 'qr-scanner';
 import { Timestamp } from 'firebase/firestore';
 
@@ -48,7 +47,7 @@ export interface ScanFormRef {
   navigateBackStep: () => boolean;
 }
 
-const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
+const ScanForm = forwardRef<ScanFormRef>((props, ref) => {
   const [step, setStep] = useState<ScanStep>("enterPrescriptionNumber");
   const router = useRouter();
 
@@ -64,7 +63,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
 
   const [clientNow, setClientNow] = useState<Date | null>(null);
   const { toast } = useToast();
-  const { getCurrentUserUsername } = useAuth();
 
   const [isScanningQR, setIsScanningQR] = useState(false);
   const [videoNode, setVideoNode] = useState<HTMLVideoElement | null>(null);
@@ -363,7 +361,6 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
   }, [toast]);
 
   const finalizeAndRedirect = useCallback(async (action: "confirmed" | "cancelled") => {
-    const currentUsername = getCurrentUserUsername(); 
     if (action === "confirmed") {
         if (medicinesInPrescription.some(med => med.quantity <= 0)) {
             toast({ title: "Cantidades Inválidas", variant: "destructive" }); return;
@@ -371,12 +368,23 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
         if (!recipeDate) {
             toast({ title: "Fecha de Receta Requerida", variant: "destructive"}); return;
         }
-        for (const med of medicinesInPrescription) {
-            try {
-                await updateMedicineStockInFirestore(med.code, med.quantity, 'dispensed', prescriptionNumber, currentUsername, Timestamp.fromDate(recipeDate));
-            } catch (error: any) {
-                toast({ title: `Error al procesar ${med.name}`, description: error.message, variant: "destructive", duration: 10000 });
-            }
+        try {
+            await dispensePrescriptionInFirestore(
+              prescriptionNumber,
+              medicinesInPrescription.map((medicine) => ({
+                medicineId: medicine.code,
+                quantity: medicine.quantity,
+              })),
+              Timestamp.fromDate(recipeDate)
+            );
+        } catch (error) {
+            toast({
+              title: "No se procesó la receta",
+              description: error instanceof Error ? error.message : "Ningún medicamento fue descontado.",
+              variant: "destructive",
+              duration: 10000,
+            });
+            return;
         }
         toast({ title: "Receta Confirmada", description: `Receta Nº ${prescriptionNumber} procesada.` });
     } else { 
@@ -384,7 +392,7 @@ const ScanForm = forwardRef<ScanFormRef, {}>((props, ref) => {
     }
     localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear the saved state
     router.push('/dashboard');
-  }, [getCurrentUserUsername, medicinesInPrescription, recipeDate, prescriptionNumber, router, toast]);
+  }, [medicinesInPrescription, recipeDate, prescriptionNumber, router, toast]);
 
   const handleDateSelect = useCallback((date: Date | undefined) => {
     setRecipeDate(date);

@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
 import { type Medicine, getMedicineByIdFromFirestore, updateMedicineStockInFirestore } from '@/lib/medicineService';
 import QrScanner from 'qr-scanner';
 import { Timestamp } from 'firebase/firestore';
@@ -42,7 +41,6 @@ export default function StockEntryForm() {
   const [isSaving, setIsSaving] = useState(false);
 
   const { toast } = useToast();
-  const { getCurrentUserUsername } = useAuth();
 
   const [isScanningQR, setIsScanningQR] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -197,14 +195,13 @@ export default function StockEntryForm() {
     }
 
     setIsSaving(true);
-    const currentUsername = getCurrentUserUsername() || 'System';
     try {
       await updateMedicineStockInFirestore(
         foundMedicine.id,
         quantityNum,
         'stocked',
         `LOTE-${Date.now().toString().slice(-6)}`, // Auto-generate a lot/rxNumber
-        currentUsername,
+        null,
         Timestamp.fromDate(transactionDate),
         Timestamp.fromDate(expirationDate)
       );

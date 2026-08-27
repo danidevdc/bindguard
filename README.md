@@ -280,6 +280,12 @@ Do not commit `.env.local` or private credentials to the repository.
 
 Firebase App Hosting injects its web app configuration during the production build. Local development still requires `.env.local`.
 
+Inventory mutations are processed by server endpoints using Firebase Admin. To test stock entries or dispensing locally, configure Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+```
+
 ## Google AI / Genkit configuration
 
 The AI modules use the `@genkit-ai/googleai` provider.

@@ -250,7 +250,7 @@ export default function ManageUsersPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirmar Eliminación</AlertDialogTitle>
                 <AlertDialogDescription>
-                  ¿Estás seguro de que quieres eliminar el registro del usuario "{userToDelete.firstName} {userToDelete.lastName}" ({userToDelete.email})? Esta acción no se puede deshacer y solo elimina los datos de la app, no la cuenta de acceso.
+                  ¿Estás seguro de que quieres eliminar el registro del usuario &quot;{userToDelete.firstName} {userToDelete.lastName}&quot; ({userToDelete.email})? Esta acción no se puede deshacer y solo elimina los datos de la app, no la cuenta de acceso.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -1,5 +1,6 @@
 
 import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import {
   collection,
   doc,
@@ -10,7 +11,6 @@ import {
   deleteDoc,
   writeBatch,
   Timestamp,
-  arrayUnion,
   serverTimestamp,
   query,
   where,
@@ -177,79 +177,64 @@ export async function updateMedicineStockInFirestore(
   quantityChange: number,
   transactionType: 'dispensed' | 'stocked',
   rxNumber: string,
-  userName: string | null, // Allow null for userName
+  _userName: string | null,
   transactionDate: Timestamp,
   expirationDateForStock?: Timestamp 
 ): Promise<void> {
-  if (!db) throw new Error("Firestore not initialized");
-  const medDocRef = doc(db, 'medicines', medicineId);
+  await postAuthenticatedInventoryRequest('/api/inventory/transaction', {
+    operationId: crypto.randomUUID(),
+    medicineId,
+    quantity: quantityChange,
+    type: transactionType,
+    rxNumber,
+    transactionDate: transactionDate.toDate().toISOString(),
+    expirationDate: expirationDateForStock?.toDate().toISOString(),
+  });
+}
 
-  try {
-    await runTransaction(db, async (transaction) => {
-      const medDoc = await transaction.get(medDocRef);
-      if (!medDoc.exists()) {
-        throw new Error(`Medicamento con ID ${medicineId} no encontrado.`);
-      }
+interface PrescriptionMedicineInput {
+  medicineId: string;
+  quantity: number;
+}
 
-      const medicineData = medDoc.data() as Medicine;
-
-      if (medicineData.isBlocked && transactionType === 'stocked') {
-        throw new Error(`El medicamento "${medicineData.name}" está cerrado y no se puede ingresar stock.`);
-      }
-      if (medicineData.isBlocked && transactionType === 'dispensed') {
-         throw new Error(`El medicamento "${medicineData.name}" está cerrado y no se puede dispensar.`);
-      }
-
-      let newStock = medicineData.currentStock;
-
-      if (transactionType === 'dispensed') {
-        if (newStock < quantityChange) {
-          throw new Error(`Stock insuficiente para ${medicineData.name}. Stock actual: ${newStock}, se requieren: ${quantityChange}.`);
-        }
-        newStock -= quantityChange;
-      } else { // stocked
-        newStock += quantityChange;
-        if (!expirationDateForStock && quantityChange > 0) {
-            throw new Error("La fecha de expiración es requerida para añadir stock.");
-        }
-      }
-
-      // Build the record object carefully
-      const recordDataObject: {
-        id: string;
-        date: Timestamp;
-        rxNumber: string;
-        quantity: number;
-        type: 'dispensed' | 'stocked';
-        userName?: string;
-        expirationDate?: Timestamp;
-      } = {
-        id: `${transactionType}_${medicineId}_${Date.now()}`,
-        date: transactionDate, 
-        rxNumber: rxNumber,
-        quantity: quantityChange,
-        type: transactionType,
-      };
-
-      if (userName) { // Only add userName if it's a non-empty string
-        recordDataObject.userName = userName;
-      }
-      if (transactionType === 'stocked' && expirationDateForStock) {
-        recordDataObject.expirationDate = expirationDateForStock;
-      }
-      
-      const newRecord = recordDataObject as DispensingRecord;
-      
-      transaction.update(medDocRef, {
-        currentStock: newStock,
-        dispensingHistory: arrayUnion(newRecord),
-        lastUpdated: serverTimestamp()
-      });
-    });
-  } catch (error) {
-    console.error("Error updating medicine stock in transaction:", error);
-    throw error; 
+async function postAuthenticatedInventoryRequest(
+  path: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Debes iniciar sesión para realizar esta operación.');
   }
+
+  const idToken = await currentUser.getIdToken();
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = (await response.json().catch(() => null)) as
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new Error(result?.error || 'No se pudo completar la operación de inventario.');
+  }
+}
+
+export async function dispensePrescriptionInFirestore(
+  prescriptionNumber: string,
+  medicines: PrescriptionMedicineInput[],
+  transactionDate: Timestamp
+): Promise<void> {
+  await postAuthenticatedInventoryRequest('/api/inventory/prescriptions', {
+    operationId: crypto.randomUUID(),
+    prescriptionNumber,
+    transactionDate: transactionDate.toDate().toISOString(),
+    medicines,
+  });
 }
 
 export async function deleteMedicineFromFirestore(medicineId: string): Promise<void> {

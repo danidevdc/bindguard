@@ -20,15 +20,24 @@ service cloud.firestore {
       allow create: if isOwner(userId)
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.isAdmin == false;
+        && request.resource.data.isAdmin == false
+        && request.resource.data.role == 'pending';
 
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
 
-      allow update: if isOwner(userId)
-        && request.resource.data.uid == resource.data.uid
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.isAdmin == resource.data.isAdmin;
+      allow update: if (
+          isOwner(userId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.isAdmin == resource.data.isAdmin
+          && request.resource.data.role == resource.data.role
+        )
+        || (
+          isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])
+          && request.resource.data.role in ['operator', 'viewer', 'pending']
+        );
 
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
@@ -36,13 +45,9 @@ service cloud.firestore {
     match /medicines/{medicineId} {
       allow read: if isSignedIn();
 
-      allow update: if isAdmin()
-        || (isSignedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'currentStock',
-            'lastUpdated',
-            'dispensingHistory'
-          ]));
+      // Inventory movements are processed by authenticated server endpoints.
+      // Client SDKs cannot mutate stock or transaction history directly.
+      allow update: if isAdmin();
 
       allow create, delete: if isAdmin();
     }
