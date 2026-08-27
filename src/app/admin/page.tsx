@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power, LayoutList, ClipboardEdit, ScanSearch } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Edit3, FileX2, Settings, PillBottle, Users, Power, ClipboardEdit, ScanSearch } from 'lucide-react';
 
 export default function AdminPage() {
   const { isCurrentUserAdmin, isLoading: authLoading } = useAuth();
@@ -70,30 +70,30 @@ export default function AdminPage() {
             <div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Medicamentos e Inventario</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link href="/admin/add-medicine" passHref legacyBehavior>
-                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                <Button asChild variant="outline" className="w-full justify-start text-base py-6">
+                  <Link href="/admin/add-medicine">
                     <PillBottle className="mr-3 h-6 w-6 text-primary" />
                     Añadir Medicamento
-                  </Button>
-                </Link>
-                <Link href="/admin/edit-medicine" passHref legacyBehavior>
-                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full justify-start text-base py-6">
+                  <Link href="/admin/edit-medicine">
                     <Edit3 className="mr-3 h-6 w-6 text-blue-600" />
                     Editar Medicamentos
-                  </Button>
-                </Link>
-                <Link href="/admin/toggle-medicine-status" passHref legacyBehavior>
-                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full justify-start text-base py-6">
+                  <Link href="/admin/toggle-medicine-status">
                     <Power className="mr-3 h-6 w-6 text-orange-500" />
                     Abrir/Cerrar Medicamento
-                  </Button>
-                </Link>
-                <Link href="/admin/inventory" passHref legacyBehavior>
-                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full justify-start text-base py-6">
+                  <Link href="/admin/inventory">
                     <ClipboardEdit className="mr-3 h-6 w-6 text-indigo-600" />
                     Gestionar Bindcards
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -101,12 +101,12 @@ export default function AdminPage() {
             <div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Recetas</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                 <Link href="/scan-recipe" passHref legacyBehavior>
-                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                <Button asChild variant="outline" className="w-full justify-start text-base py-6">
+                  <Link href="/scan-recipe">
                     <ScanSearch className="mr-3 h-6 w-6 text-purple-600" />
                     Escanear Receta (IA)
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
                 <Button variant="outline" className="w-full justify-start text-base py-6" onClick={() => handleComingSoon('Anular Receta')}>
                   <FileX2 className="mr-3 h-6 w-6 text-destructive" />
                   Anular Receta
@@ -118,12 +118,12 @@ export default function AdminPage() {
             <div>
               <h3 className="text-xl font-semibold text-foreground mb-3">Gestión de Usuarios</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link href="/admin/manage-users" passHref legacyBehavior>
-                  <Button variant="outline" className="w-full justify-start text-base py-6">
+                <Button asChild variant="outline" className="w-full justify-start text-base py-6">
+                  <Link href="/admin/manage-users">
                     <Users className="mr-3 h-6 w-6 text-blue-600" />
                     Gestionar Usuarios
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
 
